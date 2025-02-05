@@ -1,0 +1,93 @@
+﻿@code {
+    [Parameter] public string ProblemDescription { get; set; }
+    [Parameter] public string CarModel { get; set; }
+    [Parameter] public int CarYear { get; set; }
+    [Parameter] public string ProposedMechanic { get; set; }
+    [Parameter] public DateTime VisitTime { get; set; }
+    [Parameter] public EventCallback<bool> OnDecision { get; set; }
+
+    private async Task AgreeAsync()
+    {
+        await OnDecision.InvokeAsync(true);
+    }
+
+    private async Task DeclineAsync()
+    {
+        await OnDecision.InvokeAsync(false);
+    }
+}
+
+<div class="popup-overlay">
+    <div class="popup">
+        <h3>Запит на виконання роботи</h3>
+        <p><strong>Опис проблеми:</strong> @ProblemDescription</p>
+        <p><strong>Модель автомобіля:</strong> @CarModel</p>
+        <p><strong>Рік випуску:</strong> @CarYear</p>
+        <p><strong>Запропонований механік:</strong> @ProposedMechanic</p>
+        <p><strong>Час візиту:</strong> @VisitTime.ToString("g")</p>
+        <div class="popup-actions">
+            <button class="btn btn-success" @onclick="AgreeAsync">Погодитись</button>
+            <button class="btn btn-danger" @onclick="DeclineAsync">Не погодитись</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .popup-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+
+    .popup {
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        max-width: 400px;
+        text-align: center;
+    }
+
+    .popup h3 {
+        margin-bottom: 20px;
+    }
+
+    .popup p {
+        margin: 10px 0;
+    }
+
+    .popup-actions {
+        margin-top: 20px;
+        display: flex;
+        justify-content: space-around;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+
+    .btn-success {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .btn:hover {
+        opacity: 0.9;
+    }
+</style>

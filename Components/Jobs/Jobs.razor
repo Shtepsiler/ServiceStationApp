@@ -1,0 +1,298 @@
+﻿@page "/jobs"
+
+@using ServiceStationApp.Components.Account
+@using ServiceStationApp.Extensions.ViewModels.CatalogVMs
+@using ServiceStationApp.Extensions.ViewModels.IdentityVMs
+@using ServiceStationApp.Extensions.ViewModels.JobsVMs
+@using ServiceStationApp.Services.Interfaces
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Authorization
+@using Blazorise
+@using System.Security.Claims
+@using ServiceStationApp.Extensions.ViewModels.VehicleVMs
+
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@inject IJobService JobService
+@inject IVehicleService VehickeService
+@inject IUserService UserService
+
+<PageTitle>Роботи</PageTitle>
+
+<AuthorizeView Roles="Admin">
+<h3>Роботи</h3>
+
+
+    <div>
+
+        <Select TItem="string" @bind-SelectedValue="selectedStatus" @bind-SelectedValue:after="FilterJobs">
+            @foreach (var status in statuses)
+            {
+                <SelectItem Value="@status">@status</SelectItem>
+            }
+        </Select>
+        @if (Vehicles!=null)
+        {
+        <QuickGrid Items="@jobModelsQierable" RowClick="OnRowClick">
+            <PropertyColumn Property="@(p=>p.Id)" Title="ID" />
+                <TemplateColumn Title="Модель ">
+                <ChildContent Context="job">
+                    @if (job.VehicleId != null)
+                    {
+                        var veh = Vehicles.Where(p => p.id == job.VehicleId).FirstOrDefault();
+                        if(veh != null)
+                        {
+                            <span>@(veh.fullModelName != null ? veh.fullModelName:"Не знайдено" )</span>
+                        }
+                        else
+                        {
+                            <span>@("Не знайдено")</span>
+
+                        }
+                    }
+                    else
+                    {
+                        <span>@(job.ModelName!=null? job.ModelName:"Не знайдено")</span>
+                    }
+                </ChildContent>
+            </TemplateColumn>
+            <PropertyColumn Property="@(p=>p.Description)" Title="Опис проблеми" />
+            <PropertyColumn Property="@(p=>p.IssueDate)" Title="Дата візиту" />
+            <PropertyColumn Property="@(p=>p.Status)" Title="Статус" />
+            <TemplateColumn Title="Дії">
+                <ChildContent Context="job">
+                    <Button @onclick="() => OnViewJob(job)">Переглянути</Button>
+                    <Button @onclick="() => SelectMechanic(job)">Обрати механіка</Button>
+
+                </ChildContent>
+            </TemplateColumn>
+        </QuickGrid>
+        }
+    </div>
+</AuthorizeView>
+<AuthorizeView Roles="Mechanic">
+    <h3>Мої роботи</h3>
+
+    <div>
+        <Select TItem="string" @bind-SelectedValue="selectedStatus" @bind-SelectedValue:after="FilterJobs">
+            @foreach (var status in statuses)
+            {
+                <SelectItem Value="@status">@status</SelectItem>
+            }
+        </Select>
+
+        <QuickGrid Items="@jobModelsQierable" RowClick="OnRowClick">
+            <PropertyColumn Property="@(p => p.Id)" Title="ID" />
+            <TemplateColumn Title="Модель">
+                <ChildContent Context="job">
+                    @if (job.VehicleId != null)
+                    {
+                        var vehicle = Vehicles.FirstOrDefault(p => p.id == job.VehicleId);
+                        <span>@(vehicle != null ? vehicle.fullModelName : "Модель не знайдена")</span>
+                    }
+                    else
+                    {
+                        <span>@(job.ModelName ?? "Модель не вказана")</span>
+                    }
+                </ChildContent>
+            </TemplateColumn>
+            <PropertyColumn Property="@(p => p.Description)" Title="Опис проблеми" />
+            <PropertyColumn Property="@(p => p.IssueDate)" Title="Дата візиту" />
+            <PropertyColumn Property="@(p => p.Status)" Title="Статус" />
+            <TemplateColumn Title="Дії">
+                <ChildContent Context="job">
+                    @if (job.Status == "NewJob")
+                    {
+                        <Button @onclick="() => RespondToJob(job)">Відгукнутися</Button>
+                    }
+                    <Button @onclick="() => OnViewJob(job)">Переглянути</Button>
+                </ChildContent>
+            </TemplateColumn>
+        </QuickGrid>
+    </div>
+</AuthorizeView>
+<Modal @bind-Visible="isAddJobModalVisible">
+    @if(selectedJob!=null){
+    <ModalContent>
+        <ModalHeader>
+            <h5 class="modal-title">Нова робота</h5>
+            <Button CloseButton @onclick="() => isAddJobModalVisible = false"></Button>
+        </ModalHeader>
+        <ModalBody>
+            <div class="form-group">
+                <label for="status">Статус</label>
+                    <Select TItem="string" @bind-SelectedValue="selectedJob.Status">
+                    @foreach (var status in statuses.Skip(1))
+                    {
+                        <SelectItem Value="@status">@status</SelectItem>
+                    }
+                </Select>
+            </div>
+            @if (isAdmin && mechanics != null)
+            {
+                <div class="mb-3">
+                    <label for="mechanic" class="form-label">Механік</label>
+                    <select id="mechanic" class="form-select" @bind="selectedJob.MechanicId">
+                        @foreach (var mechanic in mechanics)
+                        {
+                            <option value="@mechanic.Id" selected="@(selectedJob.MechanicId == mechanic.Id ? "selected" : null)">
+                                @mechanic.UserName
+                            </option>
+                        }
+                    </select>
+
+                </div>
+            }
+
+        </ModalBody>
+        <ModalFooter>
+            <Button @onclick="async() => await SaveJob()">Зберегти</Button>
+            <Button @onclick="() => isAddJobModalVisible = false">Закрити</Button>
+        </ModalFooter>
+    </ModalContent>
+    }
+</Modal>
+
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger mt-3">@errorMessage</div>
+}
+@code {
+    private JobVM? selectedJob;
+    public bool isPopupVisible;
+    private string errorMessage;
+    bool isAdmin { get; set; }
+   
+    private List<JobVM> jobs = new();
+    private List<JobVM> filteredJobs = new();
+    private List<MechanicViewModel> mechanics;
+    private List<VehicleViewModel> Vehicles;
+
+
+
+    private IQueryable<JobVM> jobModelsQierable = Enumerable.Empty<JobVM>().AsQueryable();
+    private List<string> statuses = new() { "all", "NewJob", "Pending", "InProgress", "Completed" };
+    private string selectedStatus = "all";
+    private bool isAddJobModalVisible = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authenticationState.User;
+        if (user.Identity.IsAuthenticated)
+        {
+            var roles = user.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
+            // Опрацюйте ролі користувача тут   
+            try
+            {
+                isAdmin = false;
+                if (roles.FirstOrDefault().Equals("Admin"))
+                {
+                    isAdmin = true;
+                    var jobsVMs = await JobService.GetAllJobs();
+
+                    jobs = jobsVMs.ToList();
+
+                }
+                if (roles.FirstOrDefault().Equals("Mechanic"))
+                {
+                    var jobsVMs = await JobService.GetJobByMechanicId(Guid.Parse(user.Claims.Where(c => c.Type == ClaimTypes.NameIdentifier).FirstOrDefault().Value));
+                    jobs = jobsVMs.ToList();
+                }
+                var  Vehiclesvms = await VehickeService.GetCarModelsAsync();
+
+                Vehicles = Vehiclesvms.ToList();
+
+                var mechs = await UserService.GetMechanics();
+                mechanics = mechs.ToList(); 
+            }
+            catch(Exception e)
+            {
+                errorMessage = e.Message;
+            }
+
+
+            jobModelsQierable = jobs.AsQueryable();
+
+        }
+
+        FilterJobs();
+
+        jobModelsQierable = jobs.AsQueryable();
+    }
+    private async void SelectMechanic(JobVM job)
+    {
+        // Show the modal and set the selected job
+        isAddJobModalVisible = true;
+        selectedJob = job;
+
+    }
+
+    private async void RespondToJob(JobVM job)
+    {
+        isAddJobModalVisible = true;
+        selectedJob = job;
+
+    }
+
+    private void FilterJobs()
+    {
+        if (selectedStatus == "NewJob")
+        {
+            filteredJobs = jobs.Where(job => job.Status == "NewJob" || job.MechanicId == null).OrderByDescending(job => job.IssueDate).ToList();
+        }
+        else if (selectedStatus == "Pending")
+        {
+            filteredJobs = jobs.Where(job => job.Status == "Pending").OrderByDescending(job => job.IssueDate).ToList();
+        }
+        else if (selectedStatus == "InProgress")
+        {
+            filteredJobs = jobs.Where(job => job.Status == "InProgress").OrderByDescending(job => job.IssueDate).ToList();
+        }
+        else if (selectedStatus == "Completed")
+        {
+            filteredJobs = jobs.Where(job => job.Status == "Completed").OrderByDescending(job => job.IssueDate).ToList();
+        }
+        else
+        {
+            filteredJobs = jobs.OrderByDescending(job => job.IssueDate).ToList();
+        }
+        jobModelsQierable = filteredJobs.AsQueryable();
+    }
+
+    private async Task SaveJob()
+    {
+        // Check if the status has changed before updating
+    
+            await JobService.UpdateStatus(selectedJob.Id.Value, selectedJob.Status);
+            FilterJobs();
+        
+        // Check if the mechanic has changed
+       
+            await JobService.UpdateMecahin(selectedJob.Id.Value, selectedJob.MechanicId.Value);
+        
+
+        FilterJobs();
+        isAddJobModalVisible = false;
+    }
+
+    private void NavigateToJob(Guid jobId)
+    {
+        NavigationManager.NavigateTo($"/job-info/{jobId.ToString()}");
+    }
+
+    private void OnRowClick(JobVM job)
+    {
+        NavigateToJob(job.Id.Value);
+    }
+
+    private void OnViewJob(JobVM job)
+    {
+        NavigateToJob(job.Id.Value);
+        isPopupVisible = true;
+    }
+}

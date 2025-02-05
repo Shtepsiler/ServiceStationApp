@@ -1,0 +1,207 @@
+﻿@page "/ScheduleAppointment"
+@using System.Threading.Tasks
+@using BlazorApp.Extensions.Exceptions
+@using BlazorApp.Extensions.ViewModels.CatalogVMs
+@using BlazorApp.Extensions.ViewModels.JobsVMs
+@using BlazorApp.Extensions.ViewModels.VehicleVMs
+@using BlazorApp.Services.Interfaces
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components
+@using System.ComponentModel.DataAnnotations
+@using System.Security.Claims
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@attribute [Authorize]
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJobService JobService
+@inject IVehicleService VehicleService
+@inject IChooseModelService ChooseService
+<PageTitle>Запис на візит</PageTitle>
+
+<h3>Записатися на візит до СТО</h3>
+
+<EditForm Model="@visit" FormName="hedule" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+<!-- Вибір виробника -->
+    <div class="mb-3">
+        <label for="make" class="form-label">Виберіть виробника</label>
+        <select id="make" class="form-control" value="@visit.MakeId" @onchange="LoadModels">
+            <option value="">Оберіть виробника</option>
+            @foreach (var make in carMakes)
+            {
+                <option value="@make.Id">@make.Title</option>
+            }
+        </select>
+    </div>
+
+<!-- Вибір моделі -->
+<div class="mb-3">
+    <label for="model" class="form-label">Виберіть модель</label>
+        <select id="model" class="form-control" value="visit.ModelId" @onchange="LoadSubModels">
+        <option value="">Оберіть модель</option>
+        @foreach (var model in filteredCarModels)
+        {
+            <option value="@model.Id">@model.Title</option>
+        }
+    </select>
+</div>
+
+<!-- Вибір підмоделі -->
+<div class="mb-3">
+    <label for="submodel" class="form-label">Виберіть підмодель</label>
+        <select id="submodel" class="form-control" value="visit.SubModelId" @onchange="SubModelSubmit">
+        <option value="">Оберіть підмодель</option>
+        @foreach (var submodel in filteredSubModels)
+        {
+            <option value="@submodel.Id">@submodel.Title</option>
+        }
+    </select>
+</div>
+
+    <!-- Вибір року -->
+    <div class="mb-3">
+        <label for="year" class="form-label">Рік</label>
+        <InputNumber id="year" class="form-control" @bind-Value="visit.Year" />
+    </div>
+
+    <!-- VIN -->
+    <div class="mb-3">
+        <label for="vin" class="form-label">VIN номер</label>
+        <InputText id="vin" class="form-control" @bind-Value="visit.VIN" />
+    </div>
+    <!-- Вибір дати візиту -->
+    <div class="mb-3">
+        <label for="issueDate" class="form-label">Дата візиту</label>
+        <InputDate id="issueDate" class="form-control" @bind-Value="visit.IssueDate" />
+    </div>
+    <div class="mb-3">
+        <label for="description" class="form-label">Опис проблеми</label>
+        <InputTextArea id="description" class="form-control" @bind-Value="visit.Description" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Записатися</button>
+</EditForm>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger mt-3">@errorMessage</div>
+}
+
+@code {
+    private CreateJobCommand visit = new CreateJobCommand();
+    private List<ChooseMakeResponse> carMakes = new List<ChooseMakeResponse>();
+    private List<ChooseModelResponse> filteredCarModels = new List<ChooseModelResponse>();
+    private List<ChooseSubModeResponse> filteredSubModels = new List<ChooseSubModeResponse>();
+    private string errorMessage;
+    private string searchText = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            if (user.Identity.IsAuthenticated)
+            {
+                var Id = user.Claims.Where(c => c.Type == ClaimTypes.NameIdentifier).Select(c => c.Value).FirstOrDefault();
+                if (Guid.TryParse(Id, out Guid userId))
+                {
+                    visit.ClientId = userId;
+                }
+            }
+
+            var makes = await ChooseService.GetCarMakesAsync();
+            carMakes = makes.ToList();
+        }
+        catch (EntityNotFoundException ex)
+        {
+            errorMessage = $"Помилка завантаження даних: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка завантаження даних: {ex.Message}";
+        }
+    }
+
+    private async Task LoadModels(ChangeEventArgs e)
+    {
+        try
+        {
+            var makeId = e.Value.ToString();
+            if (Guid.TryParse(makeId, out Guid selectedMakeId))
+            {
+                visit.MakeId = selectedMakeId;
+                var responses = await ChooseService.GetCarModelsByMakeAsync(selectedMakeId);
+                filteredCarModels = responses.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка завантаження даних: {ex.Message}";
+        }
+    }
+
+    private async Task LoadSubModels(ChangeEventArgs e)
+    {
+        try{
+            var modelId = e.Value.ToString();
+            if (Guid.TryParse(modelId, out Guid selectedModelId))
+            {
+                visit.ModelId = selectedModelId;
+                var responses = await ChooseService.GetCarSubModelsByModelAsync(selectedModelId);
+                filteredSubModels = responses.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка завантаження даних: {ex.Message}";
+        }
+    }
+
+    private async Task SubModelSubmit(ChangeEventArgs e)
+    {
+        try
+        {
+            var modelId = e.Value.ToString();
+            if (Guid.TryParse(modelId, out Guid selectedModelId))
+            {
+                visit.SubModelId = selectedModelId;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка отримання даних: {ex.Message}";
+        }
+    }
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            CreateVehicleViewModel createVehicle = new();
+            createVehicle.MakeId = visit.MakeId;
+            createVehicle.ModelId = visit.ModelId;
+            createVehicle.SubModelId = visit.SubModelId;
+            createVehicle.VIN = visit.VIN;
+            createVehicle.Year = visit.Year;
+
+            Guid VehicleId = await VehicleService.CreateVehicle(createVehicle);
+
+            CreateJobRequesst request = new();
+            request.ClientId = visit.ClientId;
+            request.VehicleId = VehicleId;
+            request.IssueDate = visit.IssueDate;
+            request.Description = visit.Description;
+
+            await JobService.CreateVisitAsync(request);
+
+            NavigationManager.NavigateTo("/myjobs");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка запису на візит: {ex.Message}";
+        }
+    }
+}

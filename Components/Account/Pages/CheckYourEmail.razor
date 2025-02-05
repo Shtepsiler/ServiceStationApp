@@ -1,0 +1,15 @@
+﻿@page "/Account/CheckYourEmail"
+
+<h3>Check Your Email for confirmation letter</h3>
+
+<button @onclick="NavigateToHome" class="btn btn-primary">Return to Home Page</button>
+
+@code {
+    private void NavigateToHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+
+    [Inject]
+    private NavigationManager NavigationManager { get; set; }
+}

@@ -1,0 +1,42 @@
+﻿@page "/Account/ConfirmEmail"
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using BlazorApp.Data
+@using BlazorApp.Services.Interfaces
+@inject IIdentityService isentityServisce
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Confirm Email</PageTitle>
+
+<h3>Confir mEmail</h3>
+<StatusMessage Message="@message" />
+<div class="row">
+    <div class="col-md-6">
+    </div>
+</div>
+
+@code {
+    private string? message;
+
+    [SupplyParameterFromQuery]
+    private string? Id { get; set; }
+
+    [SupplyParameterFromQuery]
+    private string? Code { get; set; }
+
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        try
+        {
+            await isentityServisce.ConfirmEmail(Guid.Parse(Id), Code);
+            message = "Email confirmed";
+        }
+        catch { }
+
+    }
+}

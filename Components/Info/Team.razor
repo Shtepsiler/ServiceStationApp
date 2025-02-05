@@ -1,0 +1,73 @@
+﻿@page "/Team"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+<h3>Meet Our Team</h3>
+<p>Our team of skilled professionals is dedicated to providing top-quality service for all your automotive needs.</p>
+
+<div class="container">
+    <div class="row">
+        @foreach (var member in teamMembers)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <img src="@member.photoUrl" class="card-img-top" alt="Photo of @member.Name">
+                    <div class="card-body">
+                        <h5 class="card-title">@member.Name</h5>
+                        <p class="card-text"><strong>Role:</strong> @member.Role</p>
+                        <p class="card-text"><strong>Specialization:</strong> @member.Specialization</p>
+                        <p class="card-text"><strong>Competencies:</strong> @string.Join(", ", member.Competencies)</p>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<TeamMember> teamMembers = new List<TeamMember>
+    {
+        new TeamMember
+        {
+            Name = "John Doe",
+            Role = "Mechanic",
+            Specialization = "Engine Repair",
+            Competencies = new List<string> { "Diagnostics", "Engine Overhaul", "Tune-ups" },
+                        photoUrl = "https://www.memedecarbono.com.br/wp-content/uploads/2012/05/avatar2011.jpg"
+
+        },
+        new TeamMember
+        {
+            Name = "Will Smith",
+            Role = "Mechanic",
+            Specialization = "Brake Systems",
+            Competencies = new List<string> { "Brake Pads Replacement", "Fluid Flush", "Brake Caliper Service" },
+                        photoUrl = "https://th.bing.com/th/id/OIP.KRyj7RTDNj7mZjcTzabx6gHaGA?w=1400&h=1135&rs=1&pid=ImgDetMain"
+
+        },
+        new TeamMember
+        {
+            Name = "Mike Johnson",
+            Role = "Administrator",
+            Specialization = "Customer Service",
+            Competencies = new List<string> { "Scheduling", "Customer Support", "Billing" },
+            photoUrl = "https://drive.google.com/file/d/172kTcLZxivNhxUmtjZlVYLWF847-uyS5/view"
+        },
+        new TeamMember
+        {
+            Name = "Emily Brown",
+            Role = "Administrator",
+            Specialization = "Operations",
+            Competencies = new List<string> { "Inventory Management", "Supplier Coordination", "Process Optimization" },
+            photoUrl = "https://imageproxy.viewbook.com/403cfdfe1628678449e4b1ec3351655a_hd.jpg?fit=max&h=1280&w=1280"
+        }
+    };
+
+    public class TeamMember
+    {
+        public string Name { get; set; }
+        public string Role { get; set; }
+        public string Specialization { get; set; }
+        public List<string> Competencies { get; set; }
+        public string photoUrl { get; set; }
+    }
+}

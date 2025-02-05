@@ -1,0 +1,50 @@
+﻿@page "/Account/Manage/ConfirmChangeEmail"
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using BlazorApp.Data
+@using BlazorApp.Services.Interfaces
+@inject IUserService userServisce
+@inject IdentityUserAccessor UserAccessor
+@inject IdentityRedirectManager RedirectManager
+@inject ILogger<ChangePassword> Logger
+
+<PageTitle>Confirm email</PageTitle>
+
+<h3>Confirm email</h3>
+<StatusMessage Message="@message" />
+<div class="row">
+    <div class="col-md-6">
+
+    </div>
+</div>
+
+@code {
+    private string? message;
+    private ApplicationUser user = default!;
+
+    [SupplyParameterFromQuery]
+    private string? Id { get; set; }
+
+    [SupplyParameterFromQuery]
+    private string? Email { get; set; }
+    [SupplyParameterFromQuery]
+    private string? Code { get; set; }
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+
+        try
+        {
+            await userServisce.ConfirmEmail(Guid.Parse(Id), Email, Code);
+            message = "Email Confirmed";
+        }
+        catch { }
+
+    }
+}

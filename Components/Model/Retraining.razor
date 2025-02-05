@@ -1,0 +1,197 @@
+﻿@page "/retraining"
+@using ServiceStationApp.Data
+@using ServiceStationApp.Extensions.ViewModels
+@using ServiceStationApp.Extensions.ViewModels.JobsVMs
+@using ServiceStationApp.Extensions.ViewModels.Model
+@using ServiceStationApp.Services.Interfaces
+@using Blazorise
+@using Microsoft.AspNetCore.Authorization
+@inject IJobService jobService
+@inject ISpecialisationsService specService
+@inject IMachineLerningService MLService
+@inject IJSRuntime JS
+
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+<h3>Model Retraining - Labeling</h3>
+
+<AuthorizeView Roles="Admin">
+    @if (samples == null || specialisations == null)
+    {
+        <p>Loading ...</p>
+    }
+    else
+    {
+        <div class="mb-4">
+            <label for="confidenceRange">Confidence Threshold (conf):  @conf</label>
+
+            <!-- Повзунок -->
+            <input id="confidenceRange"
+                   type="range"
+                   min="0"
+                   max="1"
+                   step="0.01"
+                   value="@conf"
+                   @oninput="(e) => conf = float.Parse(e.Value?.ToString(), System.Globalization.CultureInfo.InvariantCulture)"
+                   class="form-range" />
+        </div>
+
+
+        <div class="mb-4">
+            <label>Choose Approved Data:</label>
+            <InputCheckbox @bind-Value="choseApproverd" />
+        </div>
+
+        <button class="btn btn-primary mb-4" @onclick="LoadRetrainData">Load Data</button>
+
+        <div>
+            @if (samples.Count == 0)
+            {
+                <p>No samples loaded.</p>
+            }
+            else
+            {
+                @foreach (var sample in samples)
+                {
+                    <div class="row mb-3 align-items-center" @key="sample.id">
+                        <div class="col-4 text-end">
+                            <label>@sample.new_data</label>
+                        </div>
+                        <div class="col-6">
+                            <select class="form-select" @onchange="(e) => UpdateLabel(sample.id, e.Value?.ToString())">
+                                <option value="">Select a label</option>
+                                @foreach (var spec in specialisations)
+                                {
+                                    <option value="@spec.name" selected="@((sample.new_label == spec.name))">@spec.name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-2 text-center">
+                            <button class="btn btn-danger btn-sm" @onclick="(e) => RemoveSample(sample.id)">Remove</button>
+                        </div>
+                    </div>
+                    <hr class="my-2" />
+                }
+                <div class="text-center mt-4">
+                    <button class="btn btn-primary" @onclick="SubmitLabels">Підтвердити Мітки</button>
+                </div>
+            }
+        </div>
+    }
+</AuthorizeView>
+
+<AuthorizeView>
+    <NotAuthorized>
+        <p>You do not have permission to view this page.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert alert-danger mt-3">@message</div>
+}
+@code {
+    private IEnumerable<SpecialisationVM> specialisations;
+    private List<RetrainRequestVM> samples = new List<RetrainRequestVM>();
+    private float conf { get; set; }
+    private bool choseApproverd { get; set; }
+    private string message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        message = null;
+        conf = 0.5f;
+        choseApproverd = false;
+        await LoadSpecialisations();
+    }
+
+
+    private async Task LoadSpecialisations()
+    {
+        message = null;
+        try
+        {
+            specialisations = await specService.GetSpecialisationsAsync();
+        }
+        catch (Exception e)
+        {
+            message = $"{e.Message}";
+        }
+    }
+
+    private async Task LoadRetrainData()
+    {
+        message = null;
+        try
+        {
+            samples.Clear();
+            RetrainRequest retrainRequests = await jobService.GetRetrainData(conf, choseApproverd);
+
+            if (retrainRequests?.new_data != null)
+            {
+                if (retrainRequests.ids == null || retrainRequests.ids.Count != retrainRequests.new_data.Count)
+                {
+                    retrainRequests.ids = Enumerable.Range(0, retrainRequests.new_data.Count)
+                                                    .Select(_ => Guid.NewGuid())
+                                                    .ToList();
+                }
+
+                if (retrainRequests.new_labels == null || retrainRequests.new_labels.Count != retrainRequests.new_data.Count)
+                {
+                    retrainRequests.new_labels = new List<string>(new string[retrainRequests.new_data.Count]);
+                }
+            }
+
+            for(int i =0;i<retrainRequests.new_data.Count;i++)
+            {
+                samples.Add(new(retrainRequests.ids[i], retrainRequests.new_data[i], retrainRequests.new_labels[i]));
+            }
+
+
+
+        }
+        catch (Exception e)
+        {
+            message = $"{e.Message}";
+        }
+    }
+    private void UpdateLabel(Guid id, string newLabel)
+    {
+        var sample = samples.FirstOrDefault(s => s.id == id);
+        if (sample != null)
+        {
+            sample.new_label = newLabel;
+        }
+    }
+
+    private void RemoveSample(Guid id)
+    {
+        samples.RemoveAll(s => s.id == id);
+    }
+    private async Task SubmitLabels()
+    {
+        message = null;
+        try
+        {
+            RetrainRequest retrainRequest = new();
+
+            foreach (var s in samples)
+            {
+                retrainRequest.ids.Add(s.id);
+                retrainRequest.new_data.Add(s.new_data);
+                retrainRequest.new_labels.Add(s.new_label);
+            }
+
+            UpdateModelAprovedMV update = new();
+            update.ids = retrainRequest.ids;
+            var res = await MLService.RetrainModel(retrainRequest);
+            await jobService.UpdateModelAproved(update);
+            JS.InvokeVoidAsync("alert", "Модель отримала нові дані!");
+        }
+        catch (Exception e)
+        {
+            message = $"{e.Message}";
+        }
+    }
+}

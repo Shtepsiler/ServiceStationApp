@@ -1,0 +1,281 @@
+﻿@page "/job-info/{jobId:guid}"
+
+@using BlazorApp.Extensions.ViewModels.CatalogVMs
+@using BlazorApp.Extensions.ViewModels.IdentityVMs
+@using BlazorApp.Extensions.ViewModels.JobsVMs
+@using BlazorApp.Extensions.ViewModels.VehicleVMs
+@using BlazorApp.Services.Interfaces
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Net.Http.Json
+@using Microsoft.AspNetCore.Components.QuickGrid
+@inject NavigationManager NavigationManager
+@inject IJobService JobService
+@inject ITasksService TasksService
+@inject IUserService UserService
+@inject IOrderService OrderService
+@inject IVehicleService VehicleService
+@inject IPartsService PartsService
+@inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+<PageTitle>Деталі роботи</PageTitle>
+
+<h3>Деталі роботи</h3>
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else if (job != null)
+{
+    <div class="job-details-container">
+        <div class="job-info">
+            <p><strong>ID:</strong> @job.Id.ToString()</p>
+            <p><strong>Модель автомобіля:</strong> @job.ModelName</p>
+            <p><strong>Опис проблеми:</strong> @job.Description</p>
+            <p><strong>Дата візиту:</strong> @job.IssueDate.ToString()</p>
+            @if (job.FinishDate != null)
+            {
+                <p><strong>Дата завершення роботи:</strong> @job.FinishDate.Value.ToString()</p>
+            }
+        </div>
+
+        <AuthorizeView Roles="Admin,Mechanic">
+            <button class="btn btn-primary mb-3" @onclick="() => AddTask(job.Id)">Додати завдання</button>
+        </AuthorizeView>
+
+        @if (job.OrderId != null)
+        {
+            <p><strong>ID Замовлення:</strong> @job.OrderId</p>
+            <button class="btn btn-primary mb-3" @onclick="NavtoOrder">Перейти до замовлення</button>
+        }
+        else
+        {
+            <AuthorizeView Roles="Admin,Mechanic">
+                <button class="btn btn-primary mb-3" @onclick="AddOrder">Додати замовлення</button>
+            </AuthorizeView>
+        }
+
+        <div class="task-list">
+            <h4>Список завдань</h4>
+            <QuickGrid Items="@taskViewModelsQueryable" Class="table table-striped">
+                <PropertyColumn Property="@(t => t.Name)" Title="Назва" Sortable="true"></PropertyColumn>
+                <PropertyColumn Property="@(t => t.Task)" Title="Опис"></PropertyColumn>
+                <TemplateColumn Title="Статус" Context="taskContext">
+                    @taskContext.Status
+                    <select value="taskContext.Status" @onchange="(e) => UpdateTaskStatus(taskContext.Id, e.Value.ToString())">
+                        <option value="Pending">Pending</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                    </select>
+                </TemplateColumn>
+
+                <TemplateColumn Title="Механік" Context="taskContext">
+                    @if (taskContext.MechanicId != null)
+                    {
+                        var mech = mechanics.FirstOrDefault(p => p.Id == taskContext.MechanicId);
+                        <span>@(mech != null ? mech.UserName : "Механік не знайдений")</span>
+                    }
+                    else
+                    {
+                        <span>Механік не вказаний</span>
+                    }
+                </TemplateColumn>
+
+                @* Conditionally render these columns based on roles *@
+                @if (isAdminOrMechanic)
+                {
+                    <TemplateColumn Title="Перейти до завдання" Context="taskContext">
+                        <button class="btn btn-info" @onclick="() => NavigateToTask(taskContext.Id)">Перейти</button>
+                    </TemplateColumn>
+                    <TemplateColumn Title="Дії" Context="taskContext">
+                        <button class="btn btn-danger" @onclick="() => DeleteTask(taskContext.Id)">Видалити</button>
+                    </TemplateColumn>
+                }
+            </QuickGrid>
+
+
+        </div>
+
+        @if (job.OrderId != null)
+        {
+            <div class="parts-list mt-4">
+                <h4>Список запчастин</h4>
+                <QuickGrid Items="@partViewModelsQueryable" Class="table table-striped">
+                    <PropertyColumn Property="@(t => t.PartName)" Title="Назва" Sortable="true"></PropertyColumn>
+                    <PropertyColumn Property="@(t => new string(t.Description.Take(70).ToArray()) + "...")" Title="Опис"></PropertyColumn>
+                    <PropertyColumn Property="@(t => t.ManufacturerNumber)" Title="Номер"></PropertyColumn>
+                    <AuthorizeView Roles="Admin,Mechanic">
+                        <ChildContent Context="authContext">
+                            <TemplateColumn Title="Дії">
+                                <button class="btn btn-danger" @onclick="() => DeletePart(context.Id.Value)">Видалити</button>
+                            </TemplateColumn>
+                        </ChildContent>
+                    </AuthorizeView>
+                </QuickGrid>
+
+            </div>
+        }
+    </div>
+}
+else
+{
+    <p>Завантаження...</p>
+}
+
+@code {
+    [Parameter]
+    public Guid jobId { get; set; }
+    private bool isAdminOrMechanic;
+    private JobVM job;
+    private List<TaskViewModel> tasks;
+    private string errorMessage;
+    private List<MechanicViewModel> mechanics;
+    private List<VehicleViewModel> Vehicles;
+    private List<PartViewModel> parts;
+
+    private IQueryable<TaskViewModel> taskViewModelsQueryable = Enumerable.Empty<TaskViewModel>().AsQueryable();
+    private IQueryable<PartViewModel> partViewModelsQueryable = Enumerable.Empty<PartViewModel>().AsQueryable();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        isAdminOrMechanic = user.IsInRole("Admin") || user.IsInRole("Mechanic");
+        try
+        {
+            job = await JobService.GetJobById(jobId);
+
+            var veh = await VehicleService.GetById(job.VehicleId.Value);
+            job.ModelName = veh.fullModelName;
+
+            if (job == null)
+            {
+                errorMessage = "Робота не знайдена.";
+            }
+            else
+            {
+                var mechanicVMs = await UserService.GetMechanics();
+                var tasksVMs = await TasksService.GetTasksByJobId(job.Id.Value);
+
+                if (tasksVMs != null && tasksVMs.Any())
+                {
+                    tasks = tasksVMs.ToList();
+                    taskViewModelsQueryable = tasks.AsQueryable();
+                }
+
+                if (job.OrderId.HasValue)
+                {
+                    var partsVMs = await PartsService.GetPartsByOrderIdAsync(job.OrderId.Value);
+                    partViewModelsQueryable = partsVMs.ToList().AsQueryable();
+                }
+
+                var Vehiclesvms = await VehicleService.GetCarModelsAsync();
+                mechanics = mechanicVMs.ToList();
+                Vehicles = Vehiclesvms.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка завантаження деталей роботи: {ex.Message}";
+        }
+    }
+
+
+    private void AddTask(Guid? jobId)
+    {
+        NavigationManager.NavigateTo($"/tasks/add?JobId={jobId}");
+    }
+
+    private async void AddOrder()
+    {
+        var res = await OrderService.GetNewOrder();
+        job.OrderId = res.Id;
+        await JobService.AddOrder(job.Id.Value, res.Id.Value);
+
+
+        NavigationManager.NavigateTo($"/orders/{res.Id}");
+    }
+    private async void NavtoOrder()
+    {
+
+        NavigationManager.NavigateTo($"/orders/{job.OrderId}");
+    }
+
+    private void NavigateToTask(Guid taskId)
+    {
+        NavigationManager.NavigateTo($"/tasks/edit/{taskId}?JobId={jobId}");
+    }
+
+    private async Task UpdateTaskStatus(Guid id, string status)
+    {
+        try
+        {
+            // Оновлення статусу завдання через сервіс
+            await TasksService.UpdateTaskStatus(id, status);
+
+            // Оновлення списку завдань після зміни статусу
+            await RefreshTaskList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка оновлення статусу завдання: {ex.Message}";
+        }
+    }
+
+
+    private async Task DeleteTask(Guid taskId)
+    {
+        try
+        {
+            await TasksService.DeleteTask(taskId);
+            tasks = (await TasksService.GetTasksByJobId(job.Id.Value)).ToList();
+            taskViewModelsQueryable = tasks.AsQueryable();
+
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка видалення завдання: {ex.Message}";
+        }
+    }
+    private async Task DeletePart(Guid partid)
+    {
+        try
+        {
+            await OrderService.RemovePartFromOrderAsync(job.OrderId.Value, partid);
+            var partsVMs = await PartsService.GetPartsByOrderIdAsync(job.OrderId.Value);
+            partViewModelsQueryable = partsVMs.ToList().AsQueryable();
+
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка видалення запчастини: {ex.Message}";
+        }
+    }
+    private async Task RefreshTaskList()
+    {
+        try
+        {
+            // Отримання оновленого списку завдань
+            var tasksVMs = await TasksService.GetTasksByJobId(job.Id.Value);
+
+            if (tasksVMs != null && tasksVMs.Any())
+            {
+                tasks = tasksVMs.ToList();
+                taskViewModelsQueryable = tasks.AsQueryable();
+            }
+            else
+            {
+                tasks = new List<TaskViewModel>();
+                taskViewModelsQueryable = tasks.AsQueryable();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка оновлення списку завдань: {ex.Message}";
+        }
+    }
+
+}

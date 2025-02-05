@@ -1,0 +1,169 @@
+﻿@page "/catalog"
+
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using ServiceStationApp.Services.Interfaces
+@using ServiceStationApp.Extensions.ViewModels.CatalogVMs
+@inject IPartsService PartService
+@inject ICategoryService CategoryService
+@inject IOrderService OrderService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+<h3>Каталог запчастин</h3>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-3">
+            <h5>Категорії</h5>
+            <ul class="list-group">
+                <li class="list-group-item" @onclick="() => FilterByCategory(null)">Всі категорії</li>
+                @foreach (var category in categories)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span @onclick="() => FilterByCategory(category)">@category.Title</span>
+                        <AuthorizeView Roles="Admin">
+                        <button class="btn btn-sm btn-secondary" @onclick="() => EditCategory(category.Id.Value)">Редагувати</button>
+                        </AuthorizeView>
+                    </li>
+                }
+            </ul>
+            <AuthorizeView Roles="Admin">
+            <button class="btn btn-primary mt-3" @onclick="AddCategory">Додати категорію</button>
+            </AuthorizeView>
+        </div>
+        <div class="col-md-9">
+            <div class="d-flex justify-content-between mb-3">
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="Назва запчастини" @bind="searchTerm">
+                    <button class="btn btn-outline-secondary" type="button" @onclick="SearchParts">Пошук</button>
+                </div>
+                @if (orderId != Guid.Empty)
+                {
+                    <button class="btn btn-primary" @onclick="GoToOrder">Перейти до замовлення</button>
+                }
+            </div>
+            <AuthorizeView Roles="Admin">
+            <button class="btn btn-primary mb-3" @onclick="AddPart">Додати запчастину</button>
+            </AuthorizeView>
+            <QuickGrid Items="@PartsQueryable">
+                <PropertyColumn Property="@(p => p.Id)" Title="ID" Sortable="true"></PropertyColumn>
+                <PropertyColumn Property="@(p => p.PartName)" Title="Назва" Sortable="true"></PropertyColumn>
+                <PropertyColumn Property="@(p => categories.Where(c => c.Id == p.CategoryId).FirstOrDefault().Title)" Title="Категорія" Sortable="true"></PropertyColumn>
+                <PropertyColumn Property="@(p => p.PriceRegular)" Title="Ціна" Sortable="true"></PropertyColumn>
+                <TemplateColumn Title="Дії">
+                    <ChildContent Context="part">
+                        @if (orderId != Guid.Empty)
+                        {
+                            <button class="btn btn-success" @onclick="() => AddToOrder(part.Id.Value)">Додати до корзини</button>
+                        }
+                        <AuthorizeView Roles="Admin">
+                            <button class="btn btn-primary" @onclick="() => EditPart(part.Id.Value)">Редагувати</button>
+                        </AuthorizeView>
+                    </ChildContent>
+                </TemplateColumn>
+            </QuickGrid>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger mt-3">@errorMessage</div>
+}
+@code {
+    [SupplyParameterFromQuery]
+    public Guid orderId { get; set; } = Guid.Empty;
+    private string errorMessage;
+    private List<PartViewModel> parts = new List<PartViewModel>();
+    private List<PartViewModel> filteredParts = new List<PartViewModel>();
+    private IQueryable<PartViewModel> PartsQueryable = Enumerable.Empty<PartViewModel>().AsQueryable();
+    private List<CategoryViewModel> categories = new List<CategoryViewModel>();
+    private string searchTerm = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var partsvms = await PartService.GetAllPartsAsync();
+            parts = partsvms.ToList();
+            filteredParts = parts;
+            PartsQueryable = filteredParts.AsQueryable();
+        }
+        catch (Exception e)
+        {
+
+            errorMessage = e.Message;
+        }
+
+        try
+        {
+            var categoriesVMs = await CategoryService.GetAllCategoriesAsync();
+            categories = categoriesVMs.ToList();
+        }
+        catch (Exception e)
+        {
+            errorMessage = e.Message;
+        }
+    }
+
+    private void SearchParts()
+    {
+        filteredParts = parts
+            .Where(p => string.IsNullOrEmpty(searchTerm) || p.PartName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        PartsQueryable = filteredParts.AsQueryable();
+    }
+
+    private void FilterByCategory(CategoryViewModel category)
+    {
+        if (category == null)
+        {
+            filteredParts = parts;
+        }
+        else
+        {
+            filteredParts = parts.Where(p => p.CategoryId == category.Id).ToList();
+        }
+        PartsQueryable = filteredParts.AsQueryable();
+    }
+
+    private void AddCategory()
+    {
+        NavigationManager.NavigateTo("/edit-category");
+    }
+
+    private void EditCategory(Guid categoryId)
+    {
+        NavigationManager.NavigateTo($"/edit-category/{categoryId}");
+    }
+
+    private void AddPart()
+    {
+        NavigationManager.NavigateTo("/edit-part");
+    }
+
+    private void EditPart(Guid partId)
+    {
+        NavigationManager.NavigateTo($"/edit-part/{partId}");
+    }
+
+    private void GoToOrder()
+    {
+        NavigationManager.NavigateTo($"/orders/{orderId}");
+    }
+
+    private async void AddToOrder(Guid partId)
+    {
+        try
+        {
+            await OrderService.AddPartToOrderAsync(orderId, partId);
+            await JS.InvokeVoidAsync("showTemporaryAlert", "Запчастина успішно збережена!", 3000); // 3000 мс = 3 секунди
+        }
+        catch (Exception e)
+        {
+            errorMessage = e.Message;
+        }
+    }
+}

@@ -1,0 +1,149 @@
+﻿@page "/myjobs/job/{jobId:guid}"
+
+@using BlazorApp.Extensions.ViewModels.CatalogVMs
+@using BlazorApp.Extensions.ViewModels.IdentityVMs
+@using BlazorApp.Extensions.ViewModels.JobsVMs
+@using BlazorApp.Services.Interfaces
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Net.Http.Json
+@using Microsoft.AspNetCore.Components.QuickGrid
+@inject NavigationManager NavigationManager
+@inject IJobService JobService
+@inject ITasksService TasksService
+@inject IUserService UserService
+@inject IPartsService PartService
+@inject IJSRuntime JS
+@inject IVehicleService VehicleService
+
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+<PageTitle>Деталі роботи</PageTitle>
+
+<h3>Деталі роботи</h3>
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else if (job != null && mainMechanic != null)
+{
+    <div>
+        <p><strong>ID:</strong> @job.Id.ToString()</p>
+        <p><strong>Модель автомобіля:</strong>@job.ModelName</p>
+        <p><strong>Опис проблеми:</strong> @job.Description </p>
+        <p><strong>Специфікація:</strong> @job.Specialisation </p>
+        <p><strong>Відповідальний механік:</strong> @mainMechanic.UserName </p>
+
+        <p><strong>Дата візиту:</strong> @job.IssueDate.ToString()</p>
+        @if (job.FinishDate != null)
+        {
+            <p><strong>Дата завершення роботи:</strong> @job.FinishDate.Value.ToString("dd/MM/yyyy")</p>
+        }
+
+        <h4>Список завдань</h4>
+        <QuickGrid Items="@TaskViewModelsQueryable">
+            <PropertyColumn Property="@(t => t.Name)" Title="Назва" Sortable="true"></PropertyColumn>
+            <PropertyColumn Property="@(t => t.Task)" Title="Опис"></PropertyColumn>
+            <PropertyColumn Property="@(t => t.Status)" Title="Статус" Sortable="true"></PropertyColumn>
+            <TemplateColumn Title="Механік">
+                @if (context.MechanicId != null)
+                {
+                    var vehicle = mechanics.FirstOrDefault(p => p.Id == context.MechanicId);
+                    <span>@(vehicle != null ? vehicle.UserName : "Механік не знайдений")</span>
+                }
+                else
+                {
+                    <span>@(job.ModelName ?? "Механік не вказаний")</span>
+                }
+            </TemplateColumn>
+        </QuickGrid>
+        @if (parts!=null)
+        {
+        <h4>Список запчастин</h4>
+        <QuickGrid Items="@PartsViewModelsQueryable">
+            <PropertyColumn Property="@(t => t.PartName)" Title="Назва" Sortable="true"></PropertyColumn>
+            <PropertyColumn Property="@(t => t.Description)" Title="Опис" Sortable="true"></PropertyColumn>
+            <PropertyColumn Property="@(t => t.ManufacturerNumber)" Title="Номер виробника" Sortable="true"></PropertyColumn>
+        </QuickGrid>
+        }
+    </div>
+}
+else
+{
+    <p>Завантаження...</p>
+}
+
+@code {
+    [Parameter]
+    public Guid jobId { get; set; }
+
+    private string errorMessage;
+
+    private JobVM? job;
+    private List<TaskViewModel> tasks;
+    private List<MechanicViewModel> mechanics;
+    private List<PartViewModel> parts;
+    private MechanicViewModel mainMechanic;
+
+    private IQueryable<PartViewModel> PartsViewModelsQueryable;
+
+    private IQueryable<TaskViewModel> TaskViewModelsQueryable;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            try
+            {
+                job = await JobService.GetJobById(jobId);
+
+                mainMechanic = await UserService.GetMechanic(job.MechanicId.Value);
+                
+                try
+                {
+                    var veh = await VehicleService.GetById(job.VehicleId.Value);
+                    job.ModelName = veh.fullModelName;
+                }
+                catch
+                {
+                    job.ModelName = "Не знайдено";
+                }
+            }
+            catch (Exception e)
+            {
+                errorMessage = $"Помилка завантаження деталей роботи: {e.Message}";
+            }
+
+            if (job == null)
+            {
+                errorMessage = "Робота не знайдена.";
+            }
+            else
+            {
+                var mechanicViewModels = await UserService.GetMechanics();
+                mechanics = mechanicViewModels.ToList();
+                var tsksViewModels = await TasksService.GetTasksByJobId(job.Id.Value);
+                if (tsksViewModels.Count() > 0)
+                {
+                    tasks = tsksViewModels.ToList();
+                    TaskViewModelsQueryable = tasks.AsQueryable();
+                }
+
+                if (job.OrderId != null)
+                {
+                    var partsViewModels = await PartService.GetPartsByOrderIdAsync(job.OrderId.Value);
+                    parts = partsViewModels.ToList();
+                    PartsViewModelsQueryable = parts.AsQueryable();
+                }
+
+            }
+         }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка завантаження деталей роботи: {ex.Message}";
+            this.StateHasChanged();
+
+        }
+    }
+}

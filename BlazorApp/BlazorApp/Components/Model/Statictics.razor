@@ -1,0 +1,152 @@
+﻿@page "/statistics"
+@using BlazorApp.Data
+@using BlazorApp.Extensions.ViewModels
+@using BlazorApp.Services.Interfaces
+@using Blazorise
+@using Microsoft.AspNetCore.Authorization
+@inject IMachineLerningService MLService
+@attribute [Authorize]
+
+<h3>Model Statistics</h3>
+
+<AuthorizeView Roles="Admin">
+    @if (modelStats == null)
+    {
+        <p>Loading statistics...</p>
+    }
+    else
+    {
+        <Card>
+            <CardBody>
+                <h4>Model Summary</h4>
+                <p>@((MarkupString)modelStats.ModelSummary.Replace("\n", "<br>"))</p>
+            </CardBody>
+        </Card>
+
+
+        <Card>
+            <CardBody>
+                <h4>Metrics</h4>
+                <Table>
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Accuracy</td>
+                            <td>@modelStats.Metrics.Accuracy</td>
+                        </tr>
+                        <tr>
+                            <td>Loss</td>
+                            <td>@modelStats.Metrics.Loss</td>
+                        </tr>
+                    </tbody>
+                </Table>
+            </CardBody>
+        </Card>
+
+        <Card>
+            <CardBody>
+                <h4>Classification Report</h4>
+                <Table>
+                    <thead>
+                        <tr>
+                            <th>Class</th>
+                            <th>Precision</th>
+                            <th>Recall</th>
+                            <th>F1-Score</th>
+                            <th>Support</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in modelStats.ClassificationReport.ClassMetrics)
+                        {
+                            <tr>
+                                <td>@item.Key</td>
+                                <td>@item.Value.Precision</td>
+                                <td>@item.Value.Recall</td>
+                                <td>@item.Value.F1Score</td>
+                                <td>@item.Value.Support</td>
+                            </tr>
+                        }
+                    </tbody>
+                </Table>
+            </CardBody>
+        </Card>
+        <Card>
+            <CardBody>
+                <h4>Матриця невідповідностей</h4>
+                <Table class="table table-bordered table-hover text-center">
+                    <thead>
+                        <tr>
+                            <th>Реальний клас</th>
+                            @foreach (var cm in modelStats.ConfusionMatrix)
+                            {
+                                <th>@cm.ClassName</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < modelStats.ConfusionMatrix.Count; i++)
+                        {
+                            <tr>
+                                <td>@modelStats.ConfusionMatrix[i].ClassName</td>
+                                @for (int j = 0; j < modelStats.ConfusionMatrix.Count; j++)
+                                {
+                                    var value = modelStats.ConfusionMatrix[i].Predictions[j];
+                                    <td style="@GetCellColor(value, modelStats.ConfusionMatrix[i].Predictions.Sum())">
+                                        @value
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </Table>
+            </CardBody>
+        </Card>
+    }
+</AuthorizeView>
+<AuthorizeView>
+    <NotAuthorized>
+        <p>You do not have permission to view the statistics.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private ModelStats modelStats;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await this.OnAfterRenderAsync(true);
+    }
+    string GetCellColor(int value, int maxValue)
+    {
+        // If value is zero, keep the cell white with black text
+        if (value == 0)
+        {
+            return "background-color: white; color: black;";
+        }
+
+        int blueIntensity = (int)(160 * ((double)value / (double)maxValue));
+
+        return $"background-color: rgb( {255 - blueIntensity},  {255 - blueIntensity}, 255); color: {(blueIntensity > 128 ? "white" : "black")};";
+    }
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            // Fetch statistics using the injected service
+            modelStats = await MLService.GetStatistics();
+        }
+        catch (Exception e)
+        {
+            // Handle any errors (e.g., logging, user feedback)
+            Console.Error.WriteLine($"Error loading statistics: {e.Message}");
+        }
+    }
+}

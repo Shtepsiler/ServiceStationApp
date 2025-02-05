@@ -1,0 +1,94 @@
+﻿@page "/Account/Manage"
+
+@using System.ComponentModel.DataAnnotations
+@using BlazorApp.Extensions.Exceptions
+@using Microsoft.AspNetCore.Identity
+@using BlazorApp.Data
+@using BlazorApp.Services.Interfaces
+@using System.Security.Claims
+
+@inject IUserService userServisce
+@inject IdentityUserAccessor UserAccessor
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Profile</PageTitle>
+
+<h3>Profile</h3>
+<StatusMessage Message="@message" />
+
+<div class="row">
+    <div class="col-md-6">
+        <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+            <div class="form-floating mb-3">
+                <input type="text" value="@username" class="form-control" placeholder="Please choose your username." disabled />
+                <label for="username" class="form-label">Username</label>
+            </div>
+            <div class="form-floating mb-3">
+                <InputText @bind-Value="Input.PhoneNumber" class="form-control" placeholder="Please enter your phone number." />
+                <label for="phone-number" class="form-label">Phone number</label>
+                <ValidationMessage For="() => Input.PhoneNumber" class="text-danger" />
+            </div>
+            <button type="submit" class="w-100 btn btn-lg btn-primary">Save</button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private string? message;
+
+    private ApplicationUser user = default!;
+    private string? username;
+    private string? phoneNumber;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+         user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+
+        username ??= user.UserName;
+        Input.PhoneNumber ??= user.PhoneNumber;
+        phoneNumber ??= user.PhoneNumber;
+    }
+
+    private async Task OnValidSubmitAsync()
+    {
+        if (Input.PhoneNumber == phoneNumber || string.IsNullOrEmpty(Input.PhoneNumber))
+        {
+            message = "Your phone number is unchanged.";
+            return;
+
+        }
+
+        try
+        {
+
+
+
+            await userServisce.SetPhoneNumber(new() { Id = Guid.Parse(user.Id), PhoneNumber = Input.PhoneNumber});
+
+             RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext); 
+
+        }
+        catch (ServerResponseException e)
+        {
+            message = "Your phone number is unchanged.";
+
+        }
+
+        
+    }
+
+    private sealed class InputModel
+    {
+        [Phone]
+        [Display(Name = "Phone number")]
+        public string? PhoneNumber { get; set; }
+    }
+}

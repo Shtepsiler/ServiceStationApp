@@ -1,0 +1,133 @@
+﻿@page "/tasks"
+@using ServiceStationApp.Data
+@using ServiceStationApp.Extensions.ViewModels.IdentityVMs
+@using ServiceStationApp.Extensions.ViewModels.JobsVMs
+@using ServiceStationApp.Services.Interfaces
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Identity
+@inject ITasksService TaskService
+@inject IUserService UserService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@if (mechanics != null && tasks != null)
+{
+    <h3>Tasks</h3>
+    <AuthorizeView Roles="Admin">
+        <div class="mb-3">
+            <label for="mechanicSelect" class="form-label">Оберіть механіка:</label>
+            <select @onchange="OnMechanicChange" id="mechanicSelect" class="form-select">
+                <option value="">All</option>
+                @foreach (var mechanic in mechanics)
+                {
+                    <option value="@mechanic.Id">@mechanic.UserName</option>
+                }
+            </select>
+        </div>
+
+        <button class="btn btn-primary" @onclick="AddTask">Додати завдання</button>
+    </AuthorizeView>
+
+    <QuickGrid Items="@tasks">
+        <PropertyColumn Property="@(t => t.Name)" Title="Назва" Sortable="true"></PropertyColumn>
+        <PropertyColumn Property="@(t => t.Task)" Title="Опис" Sortable="true"></PropertyColumn>
+        <PropertyColumn Property="@(t => t.Status)" Title="Статус" Sortable="true"></PropertyColumn>
+
+        <TemplateColumn Title="Механік" Context="task">
+            @if (mechanics != null)
+            {
+                var mech = mechanics.FirstOrDefault(p => p.Id == task.MechanicId);
+                if (mech != null)
+                {
+                    <span>@(mech.UserName)</span>
+                }
+                else
+                {
+                    <span>Не знайдено</span>
+                }
+            }
+        </TemplateColumn>
+
+        <TemplateColumn Title="Дії" Context="task">
+            <button class="btn btn-secondary" @onclick="() => EditTask(task.Id)">Змінити</button>
+            <AuthorizeView Roles="Admin">
+                <button class="btn btn-danger" @onclick="() => DeleteTask(task.Id)">Видалити</button>
+            </AuthorizeView>
+        </TemplateColumn>
+    </QuickGrid>
+}
+else
+{
+    <div>Завантаження</div>
+}
+
+@code {
+    private IQueryable<TaskViewModel> tasks = Enumerable.Empty<TaskViewModel>().AsQueryable();
+    private List<MechanicViewModel> mechanics;
+    private Guid? selectedMechanic;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authenticationState.User;
+            if (user.IsInRole("Mechanic"))
+            {
+                // Отримуємо Id користувача з claims
+                var userIdClaim = user.FindFirst(c => c.Type == new ClaimsIdentityOptions().UserIdClaimType); // "sub" часто використовується для Id
+                if (userIdClaim != null)
+                {
+                    selectedMechanic = Guid.Parse(userIdClaim.Value);
+                }
+            }
+        }
+        catch
+        {
+            selectedMechanic = null;
+        }
+    
+    await LoadTasks();
+    }
+
+    private async Task LoadTasks()
+    {
+        try
+        {
+            tasks = (selectedMechanic == null || selectedMechanic == Guid.Empty)
+                ? (await TaskService.GetTasks()).AsQueryable()
+                : (await TaskService.GetTasksByMechanic(selectedMechanic.Value)).AsQueryable();
+
+            var mechanicsVMs = await UserService.GetMechanics();
+            mechanics = mechanicsVMs.ToList();
+        }
+        catch (Exception e)
+        {
+            // Handle exception if needed
+        }
+    }
+
+    private async Task OnMechanicChange(ChangeEventArgs e)
+    {
+        selectedMechanic = Guid.TryParse(e.Value?.ToString(), out var mechanicId) ? mechanicId : (Guid?)null;
+        await LoadTasks();
+    }
+
+    private void AddTask()
+    {
+        Navigation.NavigateTo("/tasks/add");
+    }
+
+    private void EditTask(Guid taskId)
+    {
+        Navigation.NavigateTo($"/tasks/edit/{taskId}");
+    }
+
+    private async Task DeleteTask(Guid taskId)
+    {
+        await TaskService.DeleteTask(taskId);
+        await LoadTasks();
+    }
+}

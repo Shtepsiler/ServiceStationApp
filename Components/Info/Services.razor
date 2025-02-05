@@ -1,0 +1,45 @@
+﻿@page "/Services"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+<h3>Our Services</h3>
+<p>We offer a wide range of services to keep your vehicle running smoothly. Our team of experts is here to help you with any automotive needs you may have.</p>
+
+<div class="table-responsive">
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>Service</th>
+                <th>Description</th>
+                <th>Price Range</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var service in services)
+            {
+                <tr>
+                    <td>@service.Name</td>
+                    <td>@service.Description</td>
+                    <td>@service.PriceRange</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private List<Service> services = new List<Service>
+    {
+        new Service { Name = "Oil Change", Description = "Complete oil change service with quality oil and filter.", PriceRange = "$30 - $50" },
+        new Service { Name = "Brake Inspection", Description = "Thorough inspection of brake system including pads, rotors, and fluid.", PriceRange = "$40 - $60" },
+        new Service { Name = "Engine Diagnostics", Description = "Comprehensive diagnostics to identify and fix engine issues.", PriceRange = "$50 - $100" },
+        new Service { Name = "Tire Rotation", Description = "Rotation of tires to ensure even wear and extend tire life.", PriceRange = "$20 - $40" },
+        new Service { Name = "Battery Replacement", Description = "Replacement of old or faulty batteries with new ones.", PriceRange = "$70 - $150" }
+    };
+
+    public class Service
+    {
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public string PriceRange { get; set; }
+    }
+}
