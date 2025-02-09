@@ -11,6 +11,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Web;
 
@@ -20,7 +21,14 @@ namespace BlazorApp.Extensions
     {
         private static readonly JsonSerializerOptions options = new()
         {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            PropertyNameCaseInsensitive = true, // Дозволяє працювати зі змінними в різних регістрах
+            Converters = { new JsonStringEnumConverter() } // Конвертує Enum у string і назад
+        };
+        private static readonly JsonSerializerOptions noEnumOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            PropertyNameCaseInsensitive = true, // Дозволяє працювати зі змінними в різних регістрах
         };
 
         private HttpClient httpClient;
@@ -155,14 +163,20 @@ namespace BlazorApp.Extensions
             var responseBody = await response.Content.ReadAsStringAsync();
             StatusCodeHandler.TryHandleStatusCode(response.StatusCode, responseBody);
 
-            return JsonSerializer.Deserialize<T>(responseBody, options);
+            return JsonSerializer.Deserialize<T>(responseBody,options);
         }
         public async Task PostAsync<T>(string requestUri, IDictionary<string, string> parameters, T? viewModel)
         {
             ValidateAndLogUri(requestUri);
+            var jwtCookie = GetJwtToken();
+            if (jwtCookie != null)
+            {
+                var baseuri = httpClient.BaseAddress;
+                cookieContainer.Add(new Cookie("Bearer", jwtCookie.Value, "/", baseuri.Host));
+            }
             var uri = BuildUriWithParameters(requestUri, parameters);
 
-            var response = await httpClient.PostAsJsonAsync(uri, viewModel, options);
+            var response = await httpClient.PostAsJsonAsync(uri, viewModel, noEnumOptions);
             var responseBody = await response.Content.ReadAsStringAsync();
             StatusCodeHandler.TryHandleStatusCode(response.StatusCode, responseBody);
         
@@ -234,7 +248,7 @@ namespace BlazorApp.Extensions
         {
             ValidateAndLogUri(requestUri);
 
-            var response = await httpClient.PutAsJsonAsync(requestUri, viewModel, options);
+            var response = await httpClient.PutAsJsonAsync(requestUri, viewModel, noEnumOptions);
             var responseBody = await response.Content.ReadAsStringAsync();
             StatusCodeHandler.TryHandleStatusCode(response.StatusCode, responseBody);
    

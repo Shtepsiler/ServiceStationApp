@@ -12,7 +12,6 @@
 @using System.Security.Claims
 @using BlazorApp.Extensions.ViewModels.VehicleVMs
 
-@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
@@ -20,6 +19,8 @@
 @inject IVehicleService VehickeService
 @inject IUserService UserService
 
+
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 <PageTitle>Роботи</PageTitle>
 
 <AuthorizeView Roles="Admin">
@@ -104,7 +105,7 @@
             <PropertyColumn Property="@(p => p.Status)" Title="Статус" />
             <TemplateColumn Title="Дії">
                 <ChildContent Context="job">
-                    @if (job.Status == "NewJob")
+                    @if (job.Status == Status.New)
                     {
                         <Button @onclick="() => RespondToJob(job)">Відгукнутися</Button>
                     }
@@ -175,7 +176,7 @@
 
 
     private IQueryable<JobVM> jobModelsQierable = Enumerable.Empty<JobVM>().AsQueryable();
-    private List<string> statuses = new() { "all", "NewJob", "Pending", "InProgress", "Completed" };
+    private List<string> statuses = new() { "all", "New", "Pending", "InProgress", "Completed" };
     private string selectedStatus = "all";
     private bool isAddJobModalVisible = false;
 
@@ -204,10 +205,11 @@
                     jobs = jobsVMs.ToList();
                 }
                 var  Vehiclesvms = await VehickeService.GetCarModelsAsync();
-
+                if(Vehiclesvms!=null)
                 Vehicles = Vehiclesvms.ToList();
-
+                
                 var mechs = await UserService.GetMechanics();
+                if(mechs!=null)
                 mechanics = mechs.ToList(); 
             }
             catch(Exception e)
@@ -241,21 +243,21 @@
 
     private void FilterJobs()
     {
-        if (selectedStatus == "NewJob")
+        if (selectedStatus == "New")
         {
-            filteredJobs = jobs.Where(job => job.Status == "NewJob" || job.MechanicId == null).OrderByDescending(job => job.IssueDate).ToList();
+            filteredJobs = jobs.Where(job => job.Status == Status.New || job.MechanicId == null).OrderByDescending(job => job.IssueDate).ToList();
         }
         else if (selectedStatus == "Pending")
         {
-            filteredJobs = jobs.Where(job => job.Status == "Pending").OrderByDescending(job => job.IssueDate).ToList();
+            filteredJobs = jobs.Where(job => job.Status == Status.Pending).OrderByDescending(job => job.IssueDate).ToList();
         }
         else if (selectedStatus == "InProgress")
         {
-            filteredJobs = jobs.Where(job => job.Status == "InProgress").OrderByDescending(job => job.IssueDate).ToList();
+            filteredJobs = jobs.Where(job => job.Status == Status.InProgress).OrderByDescending(job => job.IssueDate).ToList();
         }
         else if (selectedStatus == "Completed")
         {
-            filteredJobs = jobs.Where(job => job.Status == "Completed").OrderByDescending(job => job.IssueDate).ToList();
+            filteredJobs = jobs.Where(job => job.Status == Status.Completed).OrderByDescending(job => job.IssueDate).ToList();
         }
         else
         {
@@ -268,7 +270,7 @@
     {
         // Check if the status has changed before updating
     
-            await JobService.UpdateStatus(selectedJob.Id.Value, selectedJob.Status);
+            await JobService.UpdateStatus(selectedJob.Id.Value, selectedJob.Status.Value);
             FilterJobs();
         
         // Check if the mechanic has changed

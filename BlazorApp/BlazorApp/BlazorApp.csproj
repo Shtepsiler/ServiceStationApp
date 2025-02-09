@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\ServiceStation\ServiceCenterPayment\ServiceCenterPayment.csproj" />
     <ProjectReference Include="..\BlazorApp.Client\BlazorApp.Client.csproj" />
     <PackageReference Include="Blazorise" Version="1.5.2" />
     <PackageReference Include="Blazorise.Bootstrap" Version="1.5.2" />
@@ -19,11 +20,14 @@
     <PackageReference Include="Blazorise.Sidebar" Version="1.5.2" />
     <PackageReference Include="Blazorise.Snackbar" Version="1.5.2" />
     <PackageReference Include="Blazorise.TreeView" Version="1.5.2" />
+    <PackageReference Include="Ethereum.MetaMask.Blazor" Version="1.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.QuickGrid" Version="8.0.5" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="8.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.1" />
 	  <PackageReference Include="MudBlazor" Version="6.19.1" />

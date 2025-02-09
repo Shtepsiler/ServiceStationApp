@@ -1,5 +1,6 @@
 using BlazorApp.Components;
 using BlazorApp.Components.Account;
+using BlazorApp.Components.Info;
 using BlazorApp.Data;
 using BlazorApp.Extensions;
 using BlazorApp.Services;
@@ -7,15 +8,25 @@ using BlazorApp.Services.Interfaces;
 using Blazorise;
 using Blazorise.Bootstrap;
 using Blazorise.Icons.FontAwesome;
+using Ethereum.MetaMask.Blazor;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.JSInterop;
 using MudBlazor.Services;
+using Nethereum.Metamask;
+using Nethereum.Metamask.Blazor;
+using Nethereum.UI;
+using Nethereum.Web3;
+using Nethereum.Web3.Accounts;
+using ServiceCenterPayment;
+using ServiceStationApp.Components.Account;
 using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 string APIBaseString = builder.Configuration["APIBaseString"];
-
+string infuraUrl = builder.Configuration["InfuraUrl"];
+string privateKey = builder.Configuration["PrivateKey"];
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
@@ -31,7 +42,9 @@ builder.Services
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
-builder.Services.AddScoped<AuthenticationStateProvider, PersistingRevalidatingAuthenticationStateProvider>();
+
+//builder.Services.AddScoped<AuthenticationStateProvider, PersistingRevalidatingAuthenticationStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider, PersistingRevalidatingAuthenticationEthereumStateProvider>();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -40,7 +53,9 @@ builder.Services.AddAuthentication(options =>
 })
     .AddIdentityCookies();
 
-builder.Services.AddDbContext<ApplicationDbContext>();
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseInMemoryDatabase("InMemoryDb"));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter(); 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
@@ -216,9 +231,51 @@ builder.Services.AddHttpClient("Mecahics", client =>
     handler.CookieContainer = new CookieContainer();
     return handler;
 });
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.Environment.WebRootPath)});
 
 builder.Services.AddTransient<ApiHttpClient>();
 
+
+
+
+
+//// Add Ethereum/Nethereum services
+
+builder.Services.AddScoped<Web3>(sp =>
+{
+    if (!string.IsNullOrEmpty(privateKey))
+    {
+        var account = new Account(privateKey);
+        return new Web3(account, infuraUrl);
+    }
+    return new Web3(infuraUrl);
+});
+builder.Services.AddScoped<IWeb3, Web3>(sp =>
+{
+    if (!string.IsNullOrEmpty(privateKey))
+    {
+        var account = new Account(privateKey);
+        return new Web3(account, infuraUrl);
+    }
+    return new Web3(infuraUrl);
+});
+
+
+builder.Services.AddScoped<IEthereumHostProvider, MetamaskHostProvider>();
+builder.Services.AddScoped<IMetamaskInterop, MetamaskBlazorInterop>();
+builder.Services.AddScoped<MetamaskHostProvider>();
+builder.Services.AddScoped<SelectedEthereumHostProviderService>();
+builder.Services.Configure<Web3Config>(builder.Configuration.GetSection("Blockchain"));
+builder.Services.AddWeb3Context();
+builder.Services.AddSingleton<IServiceCenterPaymentServiceFactory, ServiceCenterPaymentServiceFactory>();
+
+builder.Services.AddScoped(services =>
+{
+    var metamaskHostProvider = services.GetService<MetamaskHostProvider>();
+    var selectedHostProvider = new SelectedEthereumHostProviderService();
+    selectedHostProvider.SetSelectedEthereumHostProvider(metamaskHostProvider);
+    return selectedHostProvider;
+});
 
 var app = builder.Build();
 
@@ -236,9 +293,12 @@ else
 }
 
 app.UseHttpsRedirection();
-
+app.UseStaticFiles();
+app.UseRouting();
+app.UseAuthorization();
 app.UseStaticFiles();
 app.UseAntiforgery();
+
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()

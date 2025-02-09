@@ -29,6 +29,10 @@
         <InputTextArea @bind-Value="task.Task" id="description" class="form-control" />
     </div>
     <div class="mb-3">
+        <label for="description" class="form-label">Ціна</label>
+        <InputNumber @bind-Value="task.Price" id="description" class="form-control" />
+    </div>
+    <div class="mb-3">
         <label for="mechanic" class="form-label">Механік</label>
             <select id="mechanic" class="form-select" @bind="task.MechanicId">
                 @foreach (var mechanic in mechanics)
@@ -72,7 +76,7 @@
     {
         var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authenticationState.User;
-        task.Status = "Pending";
+        task.Status = Status.Pending;
 
         try
         {

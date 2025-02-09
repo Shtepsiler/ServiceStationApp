@@ -20,7 +20,7 @@ namespace BlazorApp.Services
             var parameters = new Dictionary<string, string> { };
 
             await httpClient.PostAsync("",parameters,taskViewModel);  
-                }
+        }
 
         public async Task DeleteTask(Guid Id)
         {

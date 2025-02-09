@@ -7,8 +7,9 @@
 
         public Guid? JobId { get; set; }
         public string? Name { get; set; }
+        public decimal? Price { get; set; }
 
         public string? Task { get; set; }
-        public string? Status { get; set; }
+        public Status Status { get; set; }
     }
 }

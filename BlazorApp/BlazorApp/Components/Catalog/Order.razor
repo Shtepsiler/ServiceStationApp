@@ -21,8 +21,13 @@ else if (order != null)
 {
     <div>
         <p><strong>ID замовлення:</strong> @order.Id</p>
+
+      @if(!order.IsPaid){
         <button class="btn btn-primary" @onclick="AddPartToOrder">Додати запчастини</button>
-        
+      }else{
+            <p><strong>Замовлення закрите</strong></p>
+      }
+
         <h4>Запчастини в замовленні</h4>
         <QuickGrid Items="@partsQueryable">
             <PropertyColumn Property="@(p => p.PartNumber)" Title="Номер деталі" Sortable="true"></PropertyColumn>

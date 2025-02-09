@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlazorApp", "BlazorApp\Blaz
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlazorApp.Client", "BlazorApp\BlazorApp.Client\BlazorApp.Client.csproj", "{654D52D9-A4DF-437B-8392-0C129F4A29A3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceCenterPayment", "..\ServiceStation\ServiceCenterPayment\ServiceCenterPayment.csproj", "{4E1FD954-6A3C-4133-B5E7-F77EE33393B1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{654D52D9-A4DF-437B-8392-0C129F4A29A3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{654D52D9-A4DF-437B-8392-0C129F4A29A3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{654D52D9-A4DF-437B-8392-0C129F4A29A3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4E1FD954-6A3C-4133-B5E7-F77EE33393B1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E1FD954-6A3C-4133-B5E7-F77EE33393B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E1FD954-6A3C-4133-B5E7-F77EE33393B1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4E1FD954-6A3C-4133-B5E7-F77EE33393B1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

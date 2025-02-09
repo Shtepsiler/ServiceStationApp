@@ -15,9 +15,11 @@ namespace BlazorApp.Services
             this.httpClient = httpClient.SetHttpClient(clientFactory.CreateClient("Order"));
 
         }
-        public async Task<OrderViewModel> GetNewOrder()
+        public async Task<OrderViewModel> GetNewOrder(Guid userId)
         {
-            return await httpClient.GetAsync<OrderViewModel>("GetNewOrder");
+            var parameters = new Dictionary<string, string> {
+                {"userId",userId.ToString() } };
+            return await httpClient.GetAsync<OrderViewModel>("GetNewOrder", parameters);
         }
 
         public async Task<OrderViewModel> GetOrderByIdAsync(Guid orderId)

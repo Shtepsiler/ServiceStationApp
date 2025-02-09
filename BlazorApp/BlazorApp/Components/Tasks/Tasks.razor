@@ -34,6 +34,7 @@
         <PropertyColumn Property="@(t => t.Name)" Title="Назва" Sortable="true"></PropertyColumn>
         <PropertyColumn Property="@(t => t.Task)" Title="Опис" Sortable="true"></PropertyColumn>
         <PropertyColumn Property="@(t => t.Status)" Title="Статус" Sortable="true"></PropertyColumn>
+        <PropertyColumn Property="@(t => t.Price)" Title=" Ціна" Sortable="true"></PropertyColumn>
 
         <TemplateColumn Title="Механік" Context="task">
             @if (mechanics != null)

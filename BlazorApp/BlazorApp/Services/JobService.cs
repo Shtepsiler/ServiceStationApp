@@ -67,12 +67,12 @@ namespace BlazorApp.Services
         }
 
 
-        public async Task UpdateStatus(Guid Id, string Status)
+        public async Task UpdateStatus(Guid Id, Status status)
         {
             var parameters = new Dictionary<string, string>
             {
                 { "Id",Id.ToString() },
-                { "Status", Status }
+                { "Status", status.ToString() }
             };
              await httpClient.PutParametrsAsync("updateStatus", parameters);
         }

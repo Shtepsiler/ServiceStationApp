@@ -13,7 +13,7 @@ namespace BlazorApp.Services.Interfaces
         Task<RetrainRequest> GetRetrainData(float conf, bool choseApproverd);
         Task UpdateModelAproved(UpdateModelAprovedMV request);
         Task AddOrder(Guid id, Guid OrderId);
-        Task UpdateStatus(Guid Id, string Status);
+        Task UpdateStatus(Guid Id, Status Status);
         Task UpdateMecahin(Guid Id, Guid MechanicId);
     }
 }
