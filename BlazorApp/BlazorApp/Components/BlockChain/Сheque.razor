@@ -1,0 +1,123 @@
+﻿@page "/Сheque"
+@using System.Numerics
+@using Nethereum.Web3
+@using ServiceCenterPayment
+@using ServiceCenterPayment.ContractDefinition
+@inject IWeb3 Web3
+@code {
+    private ServiceCenterPaymentService _service;
+    private List<JobsOutputDTO> Jobs = new();
+    private List<OrdersOutputDTO> Orders = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        string contractAddress = "0x5fbdb2315678afecb367f032d93f642f64180aa3"; 
+        _service = new ServiceCenterPaymentService(Web3, contractAddress);
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        isLoading = true;
+        Jobs.Clear();
+        Orders.Clear();
+        BigInteger index = 0;
+
+        while (true)
+        {
+            try
+            {
+                var job = await _service.JobsQueryAsync(index);
+                if (string.IsNullOrEmpty(job.JobId))
+                    break;
+                Jobs.Add(job);
+                index++;
+            }
+            catch
+            {
+                break;
+            }
+        }
+
+        index = 0;
+        while (true)
+        {
+            try
+            {
+                var order = await _service.OrdersQueryAsync(index);
+                if (string.IsNullOrEmpty(order.OrderId))
+                    break;
+                Orders.Add(order);
+                index++;
+            }
+            catch
+            {
+                break;
+            }
+        }
+        isLoading = false;
+    }
+}
+
+<h3>Список Робіт</h3>
+@if (isLoading)
+{
+    <p>Завантаження...</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>User ID</th>
+                <th>Job ID</th>
+                <th>Price</th>
+                <th>Is paid</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var job in Jobs)
+            {
+                <tr>
+                    <td>@job.UserId</td>
+                    <td>@job.JobId</td>
+                    <td>@job.Price</td>
+                    <td>@job.IsPaid</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<h3>Список Замовлень</h3>
+@if (isLoading)
+{
+    <p>Завантаження...</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>User ID</th>
+                <th>Order ID</th>
+                <th>Price</th>
+                <th>Is paid</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var order in Orders)
+            {
+                <tr>
+                    <td>@order.UserId</td>
+                    <td>@order.OrderId</td>
+                    <td>@order.Price</td>
+                    <td>@order.IsPaid</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<button class="btn btn-primary" @onclick="LoadDataAsync">Оновити</button>

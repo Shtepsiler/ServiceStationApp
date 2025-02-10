@@ -64,12 +64,11 @@ else if (job != null)
                 <p><strong>Дата завершення роботи:</strong> @job.FinishDate.Value.ToString()</p>
             }
         </div>
-
-        <AuthorizeView Roles="Admin,Mechanic">
-            <button class="btn btn-primary mb-3" @onclick="() => AddTask(job.Id)">Додати завдання</button>
-        </AuthorizeView>
         @if (!job.IsPaid)
         {
+            <AuthorizeView Roles="Admin,Mechanic">
+                <button class="btn btn-primary mb-3" @onclick="() => AddTask(job.Id)">Додати завдання</button>
+            </AuthorizeView>
             <AuthorizeView Roles="Admin">
                 <button class="btn btn-primary mb-3" @onclick="PayJob">Оплатити роботу</button>
             </AuthorizeView>

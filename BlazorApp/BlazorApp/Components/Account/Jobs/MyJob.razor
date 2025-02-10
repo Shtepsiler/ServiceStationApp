@@ -56,7 +56,7 @@ else if (job != null && mainMechanic != null)
         <p><strong>Вартість роботи:</strong> @job.Price</p>
         @if (!job.IsPaid)
         {
-            <AuthorizeView Roles="User">
+            <AuthorizeView Roles="User,Mechanic,Admin">
                 <button class="btn btn-primary mb-3" @onclick="PayJob">Оплатити роботу</button>
             </AuthorizeView>
         }
@@ -72,7 +72,7 @@ else if (job != null && mainMechanic != null)
       
             @if (order.Status != OrderStatus.Paid)
             {
-                <AuthorizeView Roles="User">
+                <AuthorizeView Roles="User,Mechanic,Admin">
                     <button class="btn btn-primary mb-3" @onclick="PayOrder">Оплатити замовлення</button>
                 </AuthorizeView>
             }
