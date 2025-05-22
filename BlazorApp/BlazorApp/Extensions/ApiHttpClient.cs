@@ -217,6 +217,12 @@ namespace BlazorApp.Extensions
         public async Task<string> PostAsyncGetString<T>(string requestUri, T viewModel)
         {
             ValidateAndLogUri(requestUri);
+            var jwtCookie = GetJwtToken();
+            if (jwtCookie != null)
+            {
+                var baseuri = httpClient.BaseAddress;
+                cookieContainer.Add(new Cookie("Bearer", jwtCookie.Value, "/", baseuri.Host));
+            }
 
             var response = await httpClient.PostAsJsonAsync(requestUri, viewModel, options);
             var responseBody = await response.Content.ReadAsStringAsync();

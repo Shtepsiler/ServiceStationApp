@@ -54,32 +54,43 @@ else if (job != null && mainMechanic != null)
         <p><strong>Специфікація:</strong> @job.Specialisation </p>
         <p><strong>Відповідальний механік:</strong> @mainMechanic.UserName </p>
         <p><strong>Вартість роботи:</strong> @job.Price</p>
-        @if (!job.IsPaid)
+        @if (job.Status == Status.Completed)
         {
-            <AuthorizeView Roles="User,Mechanic,Admin">
-                <button class="btn btn-primary mb-3" @onclick="PayJob">Оплатити роботу</button>
-            </AuthorizeView>
-        }
-        else
-        {
-            <p><strong>Робота оплачена</strong></p>
-        }
-        <p /> 
-        @if (order != null)
-        {
-        <p><strong>ID Замовлення:</strong> @job.OrderId</p>
-        <p><strong>Вафртість запчастин:</strong> @order.TotalPrice.Value</p>
-      
-            @if (order.Status != OrderStatus.Paid)
+            @if (!job.IsPaid)
             {
                 <AuthorizeView Roles="User,Mechanic,Admin">
-                    <button class="btn btn-primary mb-3" @onclick="PayOrder">Оплатити замовлення</button>
+                    <button class="btn btn-primary mb-3" @onclick="PayJob">Оплатити роботу</button>
                 </AuthorizeView>
             }
             else
             {
-                <p><strong>Замовлення оплачене</strong></p>
+                <p><strong>Робота оплачена</strong></p>
             }
+
+        }
+        else{
+            <p><strong>Робота не закінчена</strong></p>
+
+        }
+        <p /> 
+        @if (order != null)
+        {
+            <p><strong>ID Замовлення:</strong> @job.OrderId</p>
+            <p><strong>Вафртість запчастин:</strong> @order.TotalPrice.Value</p>
+            @if (job.Status == Status.Completed)
+            {
+                @if (order.Status != OrderStatus.Paid && job.Status == Status.Completed)
+                {
+                    <AuthorizeView Roles="User,Mechanic,Admin">
+                        <button class="btn btn-primary mb-3" @onclick="PayOrder">Оплатити замовлення</button>
+                    </AuthorizeView>
+                }
+                else
+                {
+                    <p><strong>Замовлення оплачене</strong></p>
+                }
+            }
+
 
         }
         <p><strong>Дата візиту:</strong> @job.IssueDate.ToString()</p>
@@ -87,14 +98,14 @@ else if (job != null && mainMechanic != null)
         {
             <p><strong>Дата завершення роботи:</strong> @job.FinishDate.Value.ToString("dd/MM/yyyy")</p>
         }
-    
-    
+
+
         <h4>Список завдань</h4>
         <QuickGrid Items="@TaskViewModelsQueryable">
             <PropertyColumn Property="@(t => t.Name)" Title="Назва" Sortable="true"></PropertyColumn>
             <PropertyColumn Property="@(t => t.Task)" Title="Опис"></PropertyColumn>
             <PropertyColumn Property="@(t => t.Status)" Title="Статус" Sortable="true"></PropertyColumn>
-            <PropertyColumn Property="@(t => t.Price)" Title="Ціна"></PropertyColumn>
+            <PropertyColumn Property="@(t => t.Price.Value)" Title="Ціна"></PropertyColumn>
 
             <TemplateColumn Title="Механік">
                 @if (context.MechanicId != null)
@@ -110,14 +121,14 @@ else if (job != null && mainMechanic != null)
         </QuickGrid>
         @if (parts!=null)
         {
-        <h4>Список запчастин</h4>
+            <h4>Список запчастин</h4>
 
-        <QuickGrid Items="@PartsViewModelsQueryable">
-            <PropertyColumn Property="@(t => t.PartName)" Title="Назва" Sortable="true"></PropertyColumn>
-            <PropertyColumn Property="@(t => t.Description)" Title="Опис" Sortable="true"></PropertyColumn>
-            <PropertyColumn Property="@(t => t.ManufacturerNumber)" Title="Номер виробника" Sortable="true"></PropertyColumn>
-            <PropertyColumn Property="@(t => t.PriceRegular)" Title="Ціна"></PropertyColumn>
-        </QuickGrid>
+            <QuickGrid Items="@PartsViewModelsQueryable">
+                <PropertyColumn Property="@(t => t.PartName)" Title="Назва" Sortable="true"></PropertyColumn>
+                <PropertyColumn Property="@(t => t.Description)" Title="Опис" Sortable="true"></PropertyColumn>
+                <PropertyColumn Property="@(t => t.ManufacturerNumber)" Title="Номер виробника" Sortable="true"></PropertyColumn>
+                <PropertyColumn Property="@(t => t.PriceRegular)" Title="Ціна"></PropertyColumn>
+            </QuickGrid>
         }
     </div>
 }
@@ -159,7 +170,7 @@ else
                 job = await JobService.GetJobById(jobId);
 
                 mainMechanic = await UserService.GetMechanic(job.MechanicId.Value);
-                
+
                 try
                 {
                     var veh = await VehicleService.GetById(job.VehicleId.Value);
@@ -199,7 +210,7 @@ else
                 }
 
             }
-         }
+        }
         catch (Exception ex)
         {
             errorMessage = $"Помилка завантаження деталей роботи: {ex.Message}";
@@ -214,14 +225,21 @@ else
             _ethereumHostProvider.EnabledChanged += HostProviderOnEnabledChanged;
         }
     }
-    public void Dispose()
-    {
-        if (_ethereumHostProvider != null)
+    public  void Dispose()
+    {try
         {
-            _ethereumHostProvider.SelectedAccountChanged -= HostProvider_SelectedAccountChanged;
-            _ethereumHostProvider.NetworkChanged -= HostProvider_NetworkChanged;
-            _ethereumHostProvider.EnabledChanged -= HostProviderOnEnabledChanged;
+            if (_ethereumHostProvider != null)
+            {
+                _ethereumHostProvider.SelectedAccountChanged -= HostProvider_SelectedAccountChanged;
+                _ethereumHostProvider.NetworkChanged -= HostProvider_NetworkChanged;
+                _ethereumHostProvider.EnabledChanged -= HostProviderOnEnabledChanged;
+            }
         }
+        catch (StackOverflowException e)
+        {
+            
+        }
+      //  this.Dispose();
     }
     private async Task PayOrder()
     {

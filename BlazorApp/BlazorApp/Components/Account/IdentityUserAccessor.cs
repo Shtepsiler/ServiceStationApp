@@ -20,7 +20,7 @@ namespace BlazorApp.Components.Account
 
             if(!user.EmailConfirmed)
             {
-                redirectManager.RedirectTo("/Account/ConfirmEmail");
+                redirectManager.RedirectTo("/Account/Identity/ConfirmEmail");
             }
 
 
