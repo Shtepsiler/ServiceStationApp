@@ -5,11 +5,13 @@
 @using BlazorApp.Services.Interfaces
 @using Microsoft.AspNetCore.Components.QuickGrid
 @using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
 @inject ITasksService TaskService
 @inject IUserService UserService
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize]
 
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @if (mechanics != null && tasks != null)

@@ -6,7 +6,9 @@ namespace BlazorApp.Services.Interfaces
     {
         Task<OrderViewModel> GetOrderByIdAsync(Guid orderId);
         Task RemovePartFromOrderAsync(Guid orderId, Guid partId);
-        Task AddPartToOrderAsync(Guid orderId, Guid partId);
-        Task<OrderViewModel> GetNewOrder(Guid userId);
+        Task AddPartToOrderAsync(Guid orderId, Guid partId, int quantity);
+        Task<OrderViewModel> GetNewOrder(Guid userId, Guid jobId);
+        Task<IEnumerable<PartViewModel>> GetPartsByOrderIdAsync(Guid orderId);
+
     }
 }

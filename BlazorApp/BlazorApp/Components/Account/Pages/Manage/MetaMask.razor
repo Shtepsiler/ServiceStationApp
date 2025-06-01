@@ -10,6 +10,7 @@
 @using Nethereum.Util
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
 @using Nethereum.ABI.EIP712
 @using Nethereum.ABI.FunctionEncoding.Attributes
 @using Nethereum.Signer
@@ -19,6 +20,7 @@
 @inject SelectedEthereumHostProviderService selectedHostProviderService
 @inject NavigationManager _navigationManager
 @rendermode @(new InteractiveServerRenderMode(prerender: true))
+@attribute [Authorize]
 
 <Metamask SelectedAccountTruncateLength="15" ConnectText="Please Connect" InstallMetamaskText="Please install Metamask" />
 

@@ -9,5 +9,10 @@ namespace BlazorApp.Services.Interfaces
         Task UpdatePartAsync(PartViewModel partViewModel);
         Task AddPartAsync(PartViewModel partViewModel);
         Task<IEnumerable<PartViewModel>> GetAllPartsAsync();
+        Task<Pagination<PartViewModel>> GetAllPartsPaginatedAsync(
+            int pageNumber,
+            int pageSize = 10,
+            string searchTerm = null,
+            Guid? categoryId = null);
     }
 }

@@ -20,7 +20,7 @@ namespace BlazorApp.Services
             var parameters = new Dictionary<string, string> { };
 
             await httpClient.PostAsync("", parameters, partViewModel);
-            
+
         }
 
         public async Task<IEnumerable<PartViewModel>> GetAllPartsAsync()
@@ -28,21 +28,41 @@ namespace BlazorApp.Services
             return await httpClient.GetAsync<IEnumerable<PartViewModel>>("");
         }
 
+        public async Task<Pagination<PartViewModel>> GetAllPartsPaginatedAsync(
+            int pageNumber,
+            int pageSize = 10,
+            string searchTerm = null,
+            Guid? categoryId = null)
+        {
+            var parameters = new Dictionary<string, string>
+            {
+                ["pageNumber"] = pageNumber.ToString(),
+                ["pageSize"] = pageSize.ToString()
+            };
+
+            if (!string.IsNullOrEmpty(searchTerm))
+                parameters["search"] = searchTerm;
+
+            if (categoryId.HasValue)
+                parameters["categoryId"] = categoryId.Value.ToString();
+
+            return await httpClient.GetAsync<Pagination<PartViewModel>>("paginated", parameters);
+        }
         public async Task<PartViewModel> GetPartByIdAsync(Guid id)
         {
             return await httpClient.GetAsync<PartViewModel>(id.ToString());
         }
 
-  
+
 
         public async Task UpdatePartAsync(PartViewModel partViewModel)
         {
-            await httpClient.PutAsync("",partViewModel);
+            await httpClient.PutAsync("", partViewModel);
         }
 
         public async Task<IEnumerable<PartViewModel>> GetPartsByOrderIdAsync(Guid orderId)
         {
-         return await httpClient.GetAsync<IEnumerable<PartViewModel>>($"GetPartsByOrderId?OrderId={orderId.ToString()}");
+            return await httpClient.GetAsync<IEnumerable<PartViewModel>>($"GetPartsByOrderId?OrderId={orderId.ToString()}");
         }
     }
 }

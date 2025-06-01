@@ -2,10 +2,12 @@
 @page "/edit-category/{categoryId:guid}"
 @using BlazorApp.Extensions.ViewModels.CatalogVMs
 @using BlazorApp.Services.Interfaces
+@using Microsoft.AspNetCore.Authorization
 @inject ICategoryService CategoryService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
+@attribute [Authorize]
 
 <h3>@(categoryId.HasValue ? "Редагувати категорію" : "Додати категорію")</h3>
 

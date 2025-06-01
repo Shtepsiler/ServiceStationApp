@@ -2,11 +2,13 @@
 @page "/edit-part/{partId:guid}"
 @using BlazorApp.Extensions.ViewModels.CatalogVMs
 @using BlazorApp.Services.Interfaces
+@using Microsoft.AspNetCore.Authorization
 @inject IPartsService PartService
 @inject ICategoryService CategoryService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
+@attribute [Authorize]
 
 <h3>@((partId == Guid.Empty || partId == null) ? "Додати запчастину" : "Редагувати запчастину")</h3>
 

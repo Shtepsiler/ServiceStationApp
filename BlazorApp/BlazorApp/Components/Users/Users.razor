@@ -3,9 +3,11 @@
 @using BlazorApp.Components.Account
 @using BlazorApp.Extensions.ViewModels.IdentityVMs
 @using BlazorApp.Services.Interfaces
+@using Microsoft.AspNetCore.Authorization
 @inject IUserService UserService
 @inject IdentityRedirectManager RedirectManager
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
+@attribute [Authorize]
 
 <h3>Користувачі</h3>
 <div class="container">

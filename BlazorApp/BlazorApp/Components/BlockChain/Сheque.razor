@@ -1,9 +1,12 @@
 ﻿@page "/Сheque"
 @using System.Numerics
+@using Microsoft.AspNetCore.Authorization
 @using Nethereum.Web3
 @using ServiceCenterPayment
 @using ServiceCenterPayment.ContractDefinition
 @inject IWeb3 Web3
+@attribute [Authorize]
+
 @code {
     private ServiceCenterPaymentService _service;
     private List<JobsOutputDTO> Jobs = new();

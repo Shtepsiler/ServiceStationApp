@@ -11,6 +11,7 @@
 @using Blazorise
 @using System.Security.Claims
 @using BlazorApp.Extensions.ViewModels.VehicleVMs
+@using Microsoft.AspNetCore.Authorization
 
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
@@ -19,6 +20,7 @@
 @inject IVehicleService VehickeService
 @inject IUserService UserService
 
+@attribute [Authorize]
 
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 <PageTitle>Роботи</PageTitle>

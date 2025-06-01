@@ -19,7 +19,7 @@ namespace BlazorApp.Services
         {
             var parameters = new Dictionary<string, string> { };
 
-            await httpClient.PostAsync("",parameters,taskViewModel);  
+            await httpClient.PostAsync("", parameters, taskViewModel);
         }
 
         public async Task DeleteTask(Guid Id)
@@ -39,7 +39,7 @@ namespace BlazorApp.Services
 
         public async Task<IEnumerable<TaskViewModel>> GetTasksByJobId(Guid Id)
         {
-            var parameters = new Dictionary<string, string> { {"Id",$"{Id.ToString()}" } };
+            var parameters = new Dictionary<string, string> { { "Id", $"{Id.ToString()}" } };
 
             return await httpClient.GetAsync<IEnumerable<TaskViewModel>>("GetTasksByJobId", parameters);
         }
@@ -52,13 +52,13 @@ namespace BlazorApp.Services
 
         public async Task UpdateTask(TaskViewModel taskViewModel)
         {
-            await httpClient.PutAsync("",taskViewModel);
+            await httpClient.PutAsync("", taskViewModel);
         }
         public async Task UpdateTaskStatus(Guid id, string status)
         {
-            var parameters = new Dictionary<string, string> { 
+            var parameters = new Dictionary<string, string> {
                 { "Id", $"{id.ToString()}" } ,
-                { "Status", status } 
+                { "Status", status }
             };
 
             await httpClient.PutParametrsAsync("updateStatus", parameters);

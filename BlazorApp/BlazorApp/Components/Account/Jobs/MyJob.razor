@@ -35,6 +35,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject SelectedEthereumHostProviderService selectedHostProviderService
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
+@attribute [Authorize]
 
 <PageTitle>Деталі роботи</PageTitle>
 <Metamask SelectedAccountTruncateLength="15" ConnectText="Please Connect" InstallMetamaskText="Please install Metamask" />
@@ -204,7 +205,7 @@ else
                 if (job.OrderId != null)
                 {
                     order = await OrderService.GetOrderByIdAsync(job.OrderId.Value);
-                    var partsViewModels = await PartService.GetPartsByOrderIdAsync(job.OrderId.Value);
+                    var partsViewModels = await OrderService.GetPartsByOrderIdAsync(job.OrderId.Value);
                     parts = partsViewModels.ToList();
                     PartsViewModelsQueryable = parts.AsQueryable();
                 }

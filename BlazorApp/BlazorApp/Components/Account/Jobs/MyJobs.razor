@@ -7,12 +7,15 @@
 @using BlazorApp.Services.Interfaces
 @using Microsoft.AspNetCore.Components.QuickGrid
 @using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
 @inject NavigationManager NavigationManager
 @inject IJobService JobService 
 @inject IVehicleService VehicleService
 @inject IUserService UserService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
+@attribute [Authorize]
+
 <PageTitle>Мої візити</PageTitle>
 <h3>Мої візити</h3>
 

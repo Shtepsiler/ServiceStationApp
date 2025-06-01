@@ -3,8 +3,10 @@
 @inject IdentityUserAccessor UserAccessor
 
 @using BlazorApp.Services.Interfaces
+@using Microsoft.AspNetCore.Authorization
 @inject IUserService userServisce
 <PageTitle>Personal Data</PageTitle>
+@attribute [Authorize]
 
 <StatusMessage />
 <h3>Personal Data</h3>

@@ -3,167 +3,435 @@
 @using Microsoft.AspNetCore.Components.QuickGrid
 @using BlazorApp.Services.Interfaces
 @using BlazorApp.Extensions.ViewModels.CatalogVMs
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Rendering
 @inject IPartsService PartService
 @inject ICategoryService CategoryService
 @inject IOrderService OrderService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
+@attribute [Authorize]
 
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 
 <h3>Каталог запчастин</h3>
 
 <div class="container">
-    <div class="row">
-        <div class="col-md-3">
-            <h5>Категорії</h5>
-            <ul class="list-group">
-                <li class="list-group-item" @onclick="() => FilterByCategory(null)">Всі категорії</li>
-                @foreach (var category in categories)
-                {
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span @onclick="() => FilterByCategory(category)">@category.Title</span>
-                        <AuthorizeView Roles="Admin">
-                        <button class="btn btn-sm btn-secondary" @onclick="() => EditCategory(category.Id.Value)">Редагувати</button>
-                        </AuthorizeView>
-                    </li>
-                }
-            </ul>
-            <AuthorizeView Roles="Admin">
-            <button class="btn btn-primary mt-3" @onclick="AddCategory">Додати категорію</button>
-            </AuthorizeView>
-        </div>
-        <div class="col-md-9">
-            <div class="d-flex justify-content-between mb-3">
-                <div class="input-group">
-                    <input type="text" class="form-control" placeholder="Назва запчастини" @bind="searchTerm">
-                    <button class="btn btn-outline-secondary" type="button" @onclick="SearchParts">Пошук</button>
-                </div>
-                @if (orderId != Guid.Empty)
-                {
-                    <button class="btn btn-primary" @onclick="GoToOrder">Перейти до замовлення</button>
-                }
-            </div>
-            <AuthorizeView Roles="Admin">
-            <button class="btn btn-primary mb-3" @onclick="AddPart">Додати запчастину</button>
-            </AuthorizeView>
-            <QuickGrid Items="@PartsQueryable">
-                <PropertyColumn Property="@(p => p.Id)" Title="ID" Sortable="true"></PropertyColumn>
-                <PropertyColumn Property="@(p => p.PartName)" Title="Назва" Sortable="true"></PropertyColumn>
-                <PropertyColumn Property="@(p => categories.Where(c => c.Id == p.CategoryId).FirstOrDefault().Title)" Title="Категорія" Sortable="true"></PropertyColumn>
-                <PropertyColumn Property="@(p => p.PriceRegular)" Title="Ціна" Sortable="true"></PropertyColumn>
-                <TemplateColumn Title="Дії">
-                    <ChildContent Context="part">
-                        @if (orderId != Guid.Empty)
-                        {
-                            <button class="btn btn-success" @onclick="() => AddToOrder(part.Id.Value)">Додати до корзини</button>
-                        }
-                        <AuthorizeView Roles="Admin">
-                            <button class="btn btn-primary" @onclick="() => EditPart(part.Id.Value)">Редагувати</button>
-                        </AuthorizeView>
-                    </ChildContent>
-                </TemplateColumn>
-            </QuickGrid>
-        </div>
-    </div>
+   <div class="row">
+       <div class="col-md-3">
+           <h5>Категорії</h5>
+           <div class="category-tree">
+               <div class="category-item root" @onclick="() => FilterByCategory(null)">
+                   <i class="fas fa-list"></i> Всі категорії
+               </div>
+               @foreach (var rootCategory in GetRootCategories())
+               {
+                   <CategoryNode Category="rootCategory"
+                   AllCategories="categories"
+                   OnCategorySelected="FilterByCategory"
+                   OnEditCategory="EditCategory"
+                   Level="0"
+                   ExpandedCategories="expandedCategories"
+                   SelectedCategory="selectedCategory"/>
+               }
+           </div>
+           <AuthorizeView Roles="Admin">
+               <button class="btn btn-primary mt-3" @onclick="AddCategory">Додати категорію</button>
+           </AuthorizeView>
+       </div>
+       <div class="col-md-9">
+           <div class="d-flex justify-content-between mb-3">
+               <div class="input-group">
+                   <input type="text" class="form-control" placeholder="Назва запчастини" @bind="searchTerm">
+                   <button class="btn btn-outline-secondary" type="button" @onclick="SearchParts" disabled="@isLoading">
+                       @if (isLoading)
+                       {
+                           <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                       }
+                       Пошук
+                   </button>
+               </div>
+               @if (orderId != Guid.Empty)
+               {
+                   <button class="btn btn-primary" @onclick="GoToOrder">Перейти до замовлення</button>
+               }
+           </div>
+
+           @if (selectedCategory != null)
+           {
+               <div class="mb-3">
+                   <span class="badge bg-info">
+                       Категорія: @selectedCategory.Title
+                       <button type="button" class="btn-close btn-close-white ms-2" @onclick="ClearCategoryFilter"></button>
+                   </span>
+               </div>
+           }
+
+           <AuthorizeView Roles="Admin">
+               <button class="btn btn-primary mb-3" @onclick="AddPart">Додати запчастину</button>
+           </AuthorizeView>
+
+           @if (isLoading)
+           {
+               <div class="text-center my-4">
+                   <div class="spinner-border" role="status">
+                       <span class="visually-hidden">Завантаження...</span>
+                   </div>
+               </div>
+           }
+           else
+           {
+               <QuickGrid Items="@PartsQueryable">
+                   <PropertyColumn Property="@(p => p.Id)" Title="ID" Sortable="true"></PropertyColumn>
+                   <PropertyColumn Property="@(p => p.PartName)" Title="Назва" Sortable="true"></PropertyColumn>
+                   <PropertyColumn Property="@(p => GetCategoryName(p.CategoryId))" Title="Категорія" Sortable="true"></PropertyColumn>
+                   <PropertyColumn Property="@(p => p.PriceRegular)" Title="Ціна" Sortable="true"></PropertyColumn>
+                   <TemplateColumn Title="Дії">
+                       <ChildContent Context="part">
+                           @if (orderId != Guid.Empty)
+                           {
+                               <button class="btn btn-success" @onclick="() => AddToOrder(part.Id.Value)">Додати до корзини</button>
+                           }
+                           <AuthorizeView Roles="Admin">
+                               <button class="btn btn-primary" @onclick="() => EditPart(part.Id.Value)">Редагувати</button>
+                           </AuthorizeView>
+                       </ChildContent>
+                   </TemplateColumn>
+               </QuickGrid>
+
+               @* Pagination controls *@
+               @if (pagination != null && pagination.TotalPages > 1)
+               {
+                   <nav aria-label="Parts pagination" class="mt-3">
+                       <ul class="pagination justify-content-center">
+                           <li class="page-item @(pagination.HasPrevious == false ? "disabled" : "")">
+                               <button class="page-link" @onclick="() => ChangePage(1)" disabled="@(pagination.HasPrevious == false)">
+                                   <i class="fas fa-angle-double-left"></i>
+                               </button>
+                           </li>
+                           <li class="page-item @(pagination.HasPrevious == false ? "disabled" : "")">
+                               <button class="page-link" @onclick="() => ChangePage(currentPage - 1)" disabled="@(pagination.HasPrevious == false)">
+                                   <i class="fas fa-angle-left"></i>
+                               </button>
+                           </li>
+                           
+                           @for (int apage = GetStartPage(); apage <= GetEndPage(); apage++)
+                           {
+                               int pageNumber = apage;
+                               <li class="page-item @(apage == currentPage ? "active" : "")">
+                                    <button class="page-link" @onclick="() => ChangePage(pageNumber)">@apage</button>
+                               </li>
+                           }
+                           
+                           <li class="page-item @(pagination.HasNext == false ? "disabled" : "")">
+                               <button class="page-link" @onclick="() => ChangePage(currentPage + 1)" disabled="@(pagination.HasNext == false)">
+                                   <i class="fas fa-angle-right"></i>
+                               </button>
+                           </li>
+                           <li class="page-item @(pagination.HasNext == false ? "disabled" : "")">
+                               <button class="page-link" @onclick="() => ChangePage(pagination.TotalPages)" disabled="@(pagination.HasNext == false)">
+                                   <i class="fas fa-angle-double-right"></i>
+                               </button>
+                           </li>
+                       </ul>
+                   </nav>
+
+                   @* Page info *@
+                   <div class="text-center text-muted">
+                       Сторінка @currentPage з @pagination.TotalPages (Всього: @((pagination.TotalPages - 1) * pagination.PageSize + pagination.Items.Count) записів)
+                   </div>
+               }
+           }
+       </div>
+   </div>
 </div>
 
 @if (!string.IsNullOrEmpty(errorMessage))
 {
-    <div class="alert alert-danger mt-3">@errorMessage</div>
+   <div class="alert alert-danger mt-3">@errorMessage</div>
 }
+
+<style>
+   .category-tree {
+       max-height: 500px;
+       overflow-y: auto;
+       border: 1px solid #dee2e6;
+       border-radius: 0.375rem;
+       padding: 0.5rem;
+   }
+
+   .category-item {
+       padding: 0.5rem;
+       margin: 0.2rem 0;
+       cursor: pointer;
+       border-radius: 0.25rem;
+       transition: background-color 0.2s;
+       display: flex;
+       align-items: center;
+       justify-content: space-between;
+   }
+
+   .category-item:hover {
+       background-color: #f8f9fa;
+   }
+
+   .category-item.selected {
+       background-color: #0d6efd;
+       color: white;
+   }
+
+   .category-item.root {
+       background-color: #e9ecef;
+       font-weight: bold;
+       margin-bottom: 0.5rem;
+   }
+
+   .category-content {
+       display: flex;
+       align-items: center;
+       flex-grow: 1;
+   }
+
+   .category-toggle {
+       margin-right: 0.5rem;
+       width: 20px;
+       text-align: center;
+       cursor: pointer;
+   }
+
+   .category-icon {
+       margin-right: 0.5rem;
+       width: 16px;
+   }
+
+   .category-actions {
+       opacity: 0;
+       transition: opacity 0.2s;
+   }
+
+   .category-item:hover .category-actions {
+       opacity: 1;
+   }
+
+   .btn-tree {
+       padding: 0.2rem 0.4rem;
+       font-size: 0.75rem;
+   }
+
+   .children-container {
+       margin-left: 1rem;
+       border-left: 2px solid #dee2e6;
+       padding-left: 0.5rem;
+   }
+</style>
+
 @code {
-    [SupplyParameterFromQuery]
-    public Guid orderId { get; set; } = Guid.Empty;
-    private string errorMessage;
-    private List<PartViewModel> parts = new List<PartViewModel>();
-    private List<PartViewModel> filteredParts = new List<PartViewModel>();
-    private IQueryable<PartViewModel> PartsQueryable = Enumerable.Empty<PartViewModel>().AsQueryable();
-    private List<CategoryViewModel> categories = new List<CategoryViewModel>();
-    private string searchTerm = string.Empty;
+   [SupplyParameterFromQuery]
+   public Guid orderId { get; set; } = Guid.Empty;
 
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            var partsvms = await PartService.GetAllPartsAsync();
-            parts = partsvms.ToList();
-            filteredParts = parts;
-            PartsQueryable = filteredParts.AsQueryable();
-        }
-        catch (Exception e)
-        {
+   private string errorMessage;
+   private Pagination<PartViewModel> pagination;
+   private IQueryable<PartViewModel> PartsQueryable = Enumerable.Empty<PartViewModel>().AsQueryable();
+   private List<CategoryViewModel> categories = new List<CategoryViewModel>();
+   private CategoryViewModel selectedCategory = null;
+   private string searchTerm = string.Empty;
+   private HashSet<Guid> expandedCategories = new HashSet<Guid>();
+   
+   // Pagination
+   private int currentPage = 1;
+   private int pageSize = 10;
+   private bool isLoading = false;
 
-            errorMessage = e.Message;
-        }
+   protected override async Task OnInitializedAsync()
+   {
+       await LoadCategoriesAsync();
+       await LoadPartsAsync();
+   }
 
-        try
-        {
-            var categoriesVMs = await CategoryService.GetAllCategoriesAsync();
-            categories = categoriesVMs.ToList();
-        }
-        catch (Exception e)
-        {
-            errorMessage = e.Message;
-        }
-    }
+   private async Task LoadCategoriesAsync()
+   {
+       try
+       {
+           var categoriesVMs = await CategoryService.GetAllCategoriesAsync();
+           categories = categoriesVMs.ToList();
+       }
+       catch (Exception e)
+       {
+           HandleError(e);
+       }
+   }
 
-    private void SearchParts()
-    {
-        filteredParts = parts
-            .Where(p => string.IsNullOrEmpty(searchTerm) || p.PartName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-        PartsQueryable = filteredParts.AsQueryable();
-    }
+   private async Task LoadPartsAsync()
+   {
+       if (isLoading) return;
+       
+       isLoading = true;
+       try
+       {
+           pagination = await PartService.GetAllPartsPaginatedAsync(currentPage, pageSize, searchTerm, selectedCategory?.Id);
+           PartsQueryable = pagination.Items.AsQueryable();
+           errorMessage = null;
+       }
+       catch (Exception e)
+       {
+           HandleError(e);
+       }
+       finally
+       {
+           isLoading = false;
+           StateHasChanged();
+       }
+   }
 
-    private void FilterByCategory(CategoryViewModel category)
-    {
-        if (category == null)
-        {
-            filteredParts = parts;
-        }
-        else
-        {
-            filteredParts = parts.Where(p => p.CategoryId == category.Id).ToList();
-        }
-        PartsQueryable = filteredParts.AsQueryable();
-    }
+   private async Task ChangePage(int newPage)
+   {
+       if (newPage < 1 || (pagination != null && newPage > pagination.TotalPages) || newPage == currentPage)
+           return;
 
-    private void AddCategory()
-    {
-        NavigationManager.NavigateTo("/edit-category");
-    }
+       currentPage = newPage;
+       await LoadPartsAsync();
+   }
 
-    private void EditCategory(Guid categoryId)
-    {
-        NavigationManager.NavigateTo($"/edit-category/{categoryId}");
-    }
+   private int GetStartPage()
+   {
+       if (pagination == null) return 1;
+       return Math.Max(1, currentPage - 2);
+   }
 
-    private void AddPart()
-    {
-        NavigationManager.NavigateTo("/edit-part");
-    }
+   private int GetEndPage()
+   {
+       if (pagination == null) return 1;
+       return Math.Min(pagination.TotalPages, currentPage + 2);
+   }
 
-    private void EditPart(Guid partId)
-    {
-        NavigationManager.NavigateTo($"/edit-part/{partId}");
-    }
+   private async Task SearchParts()
+   {
+       currentPage = 1; // Reset to first page
+       await LoadPartsAsync();
+   }
 
-    private void GoToOrder()
-    {
-        NavigationManager.NavigateTo($"/orders/{orderId}");
-    }
+   private async Task FilterByCategory(CategoryViewModel category)
+   {
+       selectedCategory = category;
+       currentPage = 1; // Reset to first page
+       await LoadPartsAsync();
+   }
 
-    private async void AddToOrder(Guid partId)
-    {
-        try
-        {
-            await OrderService.AddPartToOrderAsync(orderId, partId);
-            await JS.InvokeVoidAsync("showTemporaryAlert", "Запчастина успішно збережена!", 3000); // 3000 мс = 3 секунди
-        }
-        catch (Exception e)
-        {
-            errorMessage = e.Message;
-        }
-    }
+   private async Task ClearCategoryFilter()
+   {
+       selectedCategory = null;
+       currentPage = 1; // Reset to first page
+       await LoadPartsAsync();
+   }
+
+   private void HandleError(Exception e)
+   {
+       errorMessage = e.Message.Contains("The input does not contain any JSON tokens.") 
+           ? "No parts or categories found" 
+           : e.Message;
+   }
+
+   private List<CategoryViewModel> GetRootCategories()
+   {
+       return categories.Where(c => c.ParentId == null).ToList();
+   }
+
+   private List<CategoryViewModel> GetChildCategories(Guid parentId)
+   {
+       return categories.Where(c => c.ParentId == parentId).ToList();
+   }
+
+   private bool HasChildren(Guid categoryId)
+   {
+       return categories.Any(c => c.ParentId == categoryId);
+   }
+
+   private string GetCategoryName(Guid? categoryId)
+   {
+       if (categoryId == null) return "Без категорії";
+       var category = categories.FirstOrDefault(c => c.Id == categoryId);
+       return category?.Title ?? "Невідома категорія";
+   }
+
+   private bool IsInCategoryTree(Guid? partCategoryId, Guid? selectedCategoryId)
+   {
+       if (partCategoryId == null || selectedCategoryId == null) return false;
+       return IsDescendantOf(partCategoryId.Value, selectedCategoryId.Value);
+   }
+
+   private bool IsDescendantOf(Guid categoryId, Guid ancestorId)
+   {
+       if (categoryId == ancestorId) return true;
+       var descendants = GetAllDescendants(ancestorId);
+       return descendants.Contains(categoryId);
+   }
+
+   private HashSet<Guid> GetAllDescendants(Guid parentId)
+   {
+       var descendants = new HashSet<Guid>();
+       var directChildren = categories.Where(c => c.ParentId == parentId).ToList();
+       
+       foreach (var child in directChildren)
+       {
+           descendants.Add(child.Id.Value);
+           var childDescendants = GetAllDescendants(child.Id.Value);
+           foreach (var desc in childDescendants)
+           {
+               descendants.Add(desc);
+           }
+       }
+       
+       return descendants;
+   }
+
+   private void ToggleCategory(Guid categoryId)
+   {
+       if (expandedCategories.Contains(categoryId))
+       {
+           expandedCategories.Remove(categoryId);
+       }
+       else
+       {
+           expandedCategories.Add(categoryId);
+       }
+       StateHasChanged();
+   }
+
+   private void AddCategory()
+   {
+       NavigationManager.NavigateTo("/edit-category");
+   }
+
+   private void EditCategory(Guid categoryId)
+   {
+       NavigationManager.NavigateTo($"/edit-category/{categoryId}");
+   }
+
+   private void AddPart()
+   {
+       NavigationManager.NavigateTo("/edit-part");
+   }
+
+   private void EditPart(Guid partId)
+   {
+       NavigationManager.NavigateTo($"/edit-part/{partId}");
+   }
+
+   private void GoToOrder()
+   {
+       NavigationManager.NavigateTo($"/orders/{orderId}");
+   }
+
+   private async void AddToOrder(Guid partId)
+   {
+       try
+       {
+           await OrderService.AddPartToOrderAsync(orderId, partId, 1);
+           await JS.InvokeVoidAsync("showTemporaryAlert", "Запчастина успішно збережена!", 3000);
+       }
+       catch (Exception e)
+       {
+           errorMessage = e.Message;
+       }
+   }
 }

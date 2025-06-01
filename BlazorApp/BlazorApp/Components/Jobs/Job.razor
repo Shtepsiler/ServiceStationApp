@@ -38,6 +38,7 @@
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject SelectedEthereumHostProviderService selectedHostProviderService
+@attribute [Authorize]
 
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 
@@ -152,6 +153,7 @@ else if (job != null)
                     <PropertyColumn Property="@(t => new string(t.Description.Take(70).ToArray()) + "...")" Title="Опис"></PropertyColumn>
                     <PropertyColumn Property="@(t => t.ManufacturerNumber)" Title="Номер"></PropertyColumn>
                     <PropertyColumn Property="@(t => t.PriceRegular)" Title="Ціна"></PropertyColumn>
+                    <PropertyColumn Property="@(t => t.OrderedCount)" Title="Кількість"></PropertyColumn>
                     <AuthorizeView Roles="Admin,Mechanic">
                         <ChildContent Context="authContext">
                             <TemplateColumn Title="Дії">
@@ -223,7 +225,7 @@ else
                 if (job.OrderId.HasValue)
                 {
                     order = await OrderService.GetOrderByIdAsync(job.OrderId.Value);
-                    var partsVMs = await PartsService.GetPartsByOrderIdAsync(job.OrderId.Value);
+                    var partsVMs = await OrderService.GetPartsByOrderIdAsync(job.OrderId.Value);
                     partViewModelsQueryable = partsVMs.ToList().AsQueryable();
 
                 }
@@ -263,7 +265,7 @@ else
     private async void AddOrder()
     {
 
-        var res = await OrderService.GetNewOrder(job.ClientId.Value);
+        var res = await OrderService.GetNewOrder(job.ClientId.Value,job.Id.Value);
         job.OrderId = res.Id;
         await JobService.AddOrder(job.Id.Value, res.Id.Value);
 
@@ -318,7 +320,7 @@ else
         try
         {
             await OrderService.RemovePartFromOrderAsync(job.OrderId.Value, partid);
-            var partsVMs = await PartsService.GetPartsByOrderIdAsync(job.OrderId.Value);
+            var partsVMs = await OrderService.GetPartsByOrderIdAsync(job.OrderId.Value);
             partViewModelsQueryable = partsVMs.ToList().AsQueryable();
 
         }

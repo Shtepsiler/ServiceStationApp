@@ -31,10 +31,10 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.1" />
 	  <PackageReference Include="MudBlazor" Version="6.19.1" />
-	  <PackageReference Include="Nethereum.Metamask" Version="4.28.0" />
-	  <PackageReference Include="Nethereum.Metamask.Blazor" Version="4.28.0" />
-	  <PackageReference Include="Nethereum.UI" Version="4.28.0" />
-	  <PackageReference Include="Nethereum.Web3" Version="4.28.0" />
+	  <PackageReference Include="Nethereum.Metamask" Version="5.0.0" />
+	  <PackageReference Include="Nethereum.Metamask.Blazor" Version="5.0.0" />
+	  <PackageReference Include="Nethereum.UI" Version="5.0.0" />
+	  <PackageReference Include="Nethereum.Web3" Version="5.0.0" />
 	  <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 	  <PackageReference Include="QRCoder" Version="1.5.1" />
 	  <PackageReference Include="Blazored.FluentValidation" Version="2.1.0" />

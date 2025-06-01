@@ -33,7 +33,7 @@ namespace BlazorApp.Services
             await httpClient.PostAsync("", parameters, command);
         }
 
-        public async Task AddOrder(Guid id,Guid OrderId)
+        public async Task AddOrder(Guid id, Guid OrderId)
         {
             var parameters = new Dictionary<string, string> {
                 {"Id",id.ToString() },
@@ -74,7 +74,7 @@ namespace BlazorApp.Services
                 { "Id",Id.ToString() },
                 { "Status", status.ToString() }
             };
-             await httpClient.PutParametrsAsync("updateStatus", parameters);
+            await httpClient.PutParametrsAsync("updateStatus", parameters);
         }
         public async Task UpdateMecahin(Guid Id, Guid MechanicId)
         {

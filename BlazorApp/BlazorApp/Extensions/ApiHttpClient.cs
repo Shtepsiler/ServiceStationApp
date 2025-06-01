@@ -1,18 +1,9 @@
-﻿using Azure;
-using Microsoft.AspNetCore.Authentication;
+﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
-using System;
-using System.Collections.Generic;
-using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Net;
-using System.Net.Http;
-using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using System.Web;
 
 namespace BlazorApp.Extensions
@@ -21,12 +12,14 @@ namespace BlazorApp.Extensions
     {
         private static readonly JsonSerializerOptions options = new()
         {
+            IncludeFields = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             PropertyNameCaseInsensitive = true, // Дозволяє працювати зі змінними в різних регістрах
             Converters = { new JsonStringEnumConverter() } // Конвертує Enum у string і назад
         };
         private static readonly JsonSerializerOptions noEnumOptions = new()
         {
+            IncludeFields = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             PropertyNameCaseInsensitive = true, // Дозволяє працювати зі змінними в різних регістрах
         };
@@ -47,7 +40,7 @@ namespace BlazorApp.Extensions
                 CookieContainer = cookieContainer
             };
             httpClient = new HttpClient(handler);
-  
+
         }
 
         public ApiHttpClient SetHttpClient(HttpClient client)
@@ -78,7 +71,7 @@ namespace BlazorApp.Extensions
                 throw new InvalidOperationException("HttpContext is null");
             }
             context.Response.Cookies.Delete("Bearer");
-          await  context.SignOutAsync(IdentityConstants.ApplicationScheme);
+            await context.SignOutAsync(IdentityConstants.ApplicationScheme);
         }
 
 
@@ -106,7 +99,7 @@ namespace BlazorApp.Extensions
         {
             var referer = "https://localhost:7295/";
             if (!string.IsNullOrEmpty(navigationManager.BaseUri))
-             referer = navigationManager.BaseUri;
+                referer = navigationManager.BaseUri;
 
             httpClient.DefaultRequestHeaders.Referrer = new Uri(referer);
         }
@@ -144,7 +137,7 @@ namespace BlazorApp.Extensions
             var response = await httpClient.GetAsync(uri);
             var responseBody = await response.Content.ReadAsStringAsync();
             StatusCodeHandler.TryHandleStatusCode(response.StatusCode, responseBody);
-          
+
 
             return responseBody;
         }
@@ -163,7 +156,7 @@ namespace BlazorApp.Extensions
             var responseBody = await response.Content.ReadAsStringAsync();
             StatusCodeHandler.TryHandleStatusCode(response.StatusCode, responseBody);
 
-            return JsonSerializer.Deserialize<T>(responseBody,options);
+            return JsonSerializer.Deserialize<T>(responseBody, options);
         }
         public async Task PostAsync<T>(string requestUri, IDictionary<string, string> parameters, T? viewModel)
         {
@@ -179,7 +172,7 @@ namespace BlazorApp.Extensions
             var response = await httpClient.PostAsJsonAsync(uri, viewModel, noEnumOptions);
             var responseBody = await response.Content.ReadAsStringAsync();
             StatusCodeHandler.TryHandleStatusCode(response.StatusCode, responseBody);
-        
+
         }
         public async Task PostAsync(string requestUri, IDictionary<string, string> parameters)
         {
@@ -240,7 +233,7 @@ namespace BlazorApp.Extensions
             var responseBody = await response.Content.ReadAsStringAsync();
             StatusCodeHandler.TryHandleStatusCode(response.StatusCode, responseBody);
         }
-       public async Task PutParametrsAsync(string requestUri, IDictionary<string, string> parameters)
+        public async Task PutParametrsAsync(string requestUri, IDictionary<string, string> parameters)
         {
             ValidateAndLogUri(requestUri);
             var uri = BuildUriWithParameters(requestUri, parameters);
@@ -257,9 +250,9 @@ namespace BlazorApp.Extensions
             var response = await httpClient.PutAsJsonAsync(requestUri, viewModel, noEnumOptions);
             var responseBody = await response.Content.ReadAsStringAsync();
             StatusCodeHandler.TryHandleStatusCode(response.StatusCode, responseBody);
-   
+
         }
- 
+
 
         public async Task PutAsync<T>(string requestUri, IDictionary<string, string> parameters, T viewModel)
         {
@@ -269,7 +262,7 @@ namespace BlazorApp.Extensions
             var response = await httpClient.PutAsJsonAsync(uri, viewModel, options);
             var responseBody = await response.Content.ReadAsStringAsync();
             StatusCodeHandler.TryHandleStatusCode(response.StatusCode, responseBody);
-    
+
         }
 
         public async Task DeleteAsync(string requestUri)
@@ -279,7 +272,7 @@ namespace BlazorApp.Extensions
             var response = await httpClient.DeleteAsync(requestUri);
             var responseBody = await response.Content.ReadAsStringAsync();
             StatusCodeHandler.TryHandleStatusCode(response.StatusCode, responseBody);
-        
+
         }
 
         public async Task DeleteAsync(string requestUri, IDictionary<string, string> parameters)
