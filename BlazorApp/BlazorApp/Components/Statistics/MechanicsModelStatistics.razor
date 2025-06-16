@@ -1,0 +1,276 @@
+﻿@page "/statistics/specializations"
+@using BlazorApp.Data
+@using BlazorApp.Extensions.ViewModels
+@using BlazorApp.Services.Interfaces
+@using Blazorise
+@using Microsoft.AspNetCore.Authorization
+@inject IMachineLerningService MLService
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>Model Statistics</PageTitle>
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0">Model Statistics</h3>
+        @if (modelStats != null)
+        {
+            <Button Color="Color.Primary" Size="Size.Small" @onclick="RefreshStats">
+                <Icon Name="IconName.ArrowAltCircleDown" class="me-1" />
+                Refresh
+            </Button>
+        }
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+            <div class="text-center">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mb-0">Loading model statistics...</p>
+            </div>
+        </div>
+    }
+    else if (errorMessage != null)
+    {
+        <Alert Color="Color.Danger" Visible="true">
+            <AlertDescription>
+                <strong>Error:</strong> @errorMessage
+                <Button Color="Color.Light" Size="Size.Small" class="ms-2" @onclick="RefreshStats">
+                    Retry
+                </Button>
+            </AlertDescription>
+        </Alert>
+    }
+    @if (modelStats != null)
+    {
+        <Row>
+            <!-- Загальні метрики -->
+            <Column ColumnSize="ColumnSize.Is12">
+                <Card class="mb-4">
+                    <CardHeader>
+                        <CardTitle>Overall Metrics</CardTitle>
+                    </CardHeader>
+                    <CardBody>
+                        <Row>
+                            <Column ColumnSize="ColumnSize.Is12.Is6.OnDesktop">
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="fw-semibold">Accuracy</span>
+                                        <div Color="Color.Dark">
+                                            @(modelStats.Metrics.Accuracy.ToString("F3"))
+                                        </div>
+                                    </div>
+                                    <Progress Value="@((int)(modelStats.Metrics.Accuracy * 100))"
+                                              Color="@GetAccuracyColor(modelStats.Metrics.Accuracy)" />
+                                </div>
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="fw-semibold">Loss</span>
+                                        <div Color="Color.Info">@modelStats.Metrics.Loss.ToString("F3")</div>
+                                    </div>
+                                </div>
+                            </Column>
+                            <Column ColumnSize="ColumnSize.Is12.Is6.OnDesktop">
+                                <div class="mb-2">
+                                    <small class="text-muted">Macro Avg Precision:</small>
+                                    <div class="fw-bold">@modelStats.ClassificationReport.MacroAvgPrecision.ToString("F3")</div>
+                                </div>
+                                <div class="mb-2">
+                                    <small class="text-muted">Macro Avg Recall:</small>
+                                    <div class="fw-bold">@modelStats.ClassificationReport.MacroAvgRecall.ToString("F3")</div>
+                                </div>
+                                <div class="mb-2">
+                                    <small class="text-muted">Macro Avg F1:</small>
+                                    <div class="fw-bold">@modelStats.ClassificationReport.MacroAvgF1.ToString("F3")</div>
+                                </div>
+                                <div class="mb-2">
+                                    <small class="text-muted">Weighted Avg F1:</small>
+                                    <div class="fw-bold">@modelStats.ClassificationReport.WeightedAvgF1.ToString("F3")</div>
+                                </div>
+                            </Column>
+                        </Row>
+                    </CardBody>
+                </Card>
+            </Column>
+
+            <!-- Основний зміст -->
+            <Column ColumnSize="ColumnSize.Is12.Is12.OnDesktop">
+                <!-- Model Summary -->
+                <Card class="mb-3">
+                    <CardHeader>
+                        <CardTitle>Model Summary</CardTitle>
+                    </CardHeader>
+                    <CardBody>
+                        <pre class="bg-light p-3 rounded" style="white-space: pre-wrap;">@modelStats.ModelSummary</pre>
+                    </CardBody>
+                </Card>
+
+                <!-- Classification Report -->
+                <Card class="mb-3">
+                    <CardHeader>
+                        <CardTitle>Classification Report</CardTitle>
+                    </CardHeader>
+                    <CardBody>
+                        <div class="table-responsive">
+                            <Table class="table-hover">
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHeaderCell>Class</TableHeaderCell>
+                                        <TableHeaderCell class="text-end">Precision</TableHeaderCell>
+                                        <TableHeaderCell class="text-end">Recall</TableHeaderCell>
+                                        <TableHeaderCell class="text-end">F1-Score</TableHeaderCell>
+                                        <TableHeaderCell class="text-end">Support</TableHeaderCell>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    @foreach (var item in modelStats.ClassificationReport.ClassMetrics)
+                                    {
+                                        <TableRow>
+                                            <TableRowCell><div Color="Color.Dark">@item.Key</div></TableRowCell>
+                                            <TableRowCell class="text-end">@item.Value.Precision.ToString("F3")</TableRowCell>
+                                            <TableRowCell class="text-end">@item.Value.Recall.ToString("F3")</TableRowCell>
+                                            <TableRowCell class="text-end">@item.Value.F1Score.ToString("F3")</TableRowCell>
+                                            <TableRowCell class="text-end">@((int)item.Value.Support)</TableRowCell>
+                                        </TableRow>
+                                    }
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardBody>
+                </Card>
+
+                <!-- Confusion Matrix -->
+                <Card>
+                    <CardBody>
+                        <h4>Матриця невідповідностей</h4>
+                        <Table class="table table-bordered table-hover text-center">
+                            <thead>
+                            <tr>
+                                <th class="align-middle">Реальний \ Передбачений</th>
+                                @foreach (var predicted in modelStats.ConfusionMatrix)
+                                {
+                                    <th class="fw-bold">@predicted.ClassName</th>
+                                }
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @for (int i = 0; i < modelStats.ConfusionMatrix.Count; i++)
+                            {
+                                var actual = modelStats.ConfusionMatrix[i];
+                                <tr>
+                                    <td class="fw-bold">@actual.ClassName</td>
+                                    @for (int j = 0; j < modelStats.ConfusionMatrix.Count; j++)
+                                    {
+                                        var value = actual.Predictions[j];
+                                        var max = actual.Predictions.Max();  // найвища кількість для нормалізації
+                                        <td style="@GetCellColor(value, max)">
+                                            @value
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                            </tbody>
+                        </Table>
+                    </CardBody>
+                </Card>
+
+            </Column>
+
+            <!-- Статистика класів -->
+            <Column ColumnSize="ColumnSize.Is12.Is4.OnDesktop">
+                <!-- Quick Stats -->
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Quick Stats</CardTitle>
+                    </CardHeader>
+                    <CardBody>
+                        <div class="mb-2">
+                            <small class="text-muted">Total Classes:</small>
+                            <div class="fw-bold">@modelStats.ClassificationReport.ClassMetrics.Count</div>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">Total Samples:</small>
+                            <div class="fw-bold">@((int)modelStats.ClassificationReport.ClassMetrics.Values.Sum(x => x.Support))</div>
+                        </div>
+                    </CardBody>
+                </Card>
+            </Column>
+        </Row>
+    }
+
+</div>
+
+@code {
+    private ModelStats? modelStats;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+ 
+    protected override async Task OnInitializedAsync()
+    {
+   
+                await LoadStats();
+   
+    }
+
+// Видали OnAfterRenderAsync повністю
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadStats();
+        }
+    }
+
+    private async Task LoadStats()
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+
+            modelStats = await MLService.GetStatistics();
+        }
+        catch (Exception e)
+        {
+            errorMessage = e.Message;
+            Console.Error.WriteLine($"Error loading statistics: {e.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshStats()
+    {
+        await LoadStats();
+    }
+    string GetCellColor(int value, int maxValue)
+    {
+        if (value == 0)
+            return "background-color: white; color: black;";
+
+        double intensity = (double)value / maxValue;
+        int blue = 255;
+        int reduction = (int)(200 * intensity);
+        int redGreen = 255 - reduction;
+
+        return $"background-color: rgb({redGreen}, {redGreen}, {blue}); color: {(reduction > 100 ? "white" : "black")};";
+    }
+   
+
+    private Color GetAccuracyColor(float accuracy)
+    {
+        return accuracy switch
+        {
+            >= 0.9f => Color.Success,
+            >= 0.7f => Color.Warning,
+            _ => Color.Danger
+        };
+    }
+}

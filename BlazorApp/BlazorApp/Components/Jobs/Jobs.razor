@@ -12,6 +12,7 @@
 @using System.Security.Claims
 @using BlazorApp.Extensions.ViewModels.VehicleVMs
 @using Microsoft.AspNetCore.Authorization
+@using BlazorApp.Helpers
 
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
@@ -26,136 +27,294 @@
 <PageTitle>Роботи</PageTitle>
 
 <AuthorizeView Roles="Admin">
-<h3>Роботи</h3>
-
-
-    <div>
-
-        <Select TItem="string" @bind-SelectedValue="selectedStatus" @bind-SelectedValue:after="FilterJobs">
-            @foreach (var status in statuses)
-            {
-                <SelectItem Value="@status">@status</SelectItem>
-            }
-        </Select>
-        @if (Vehicles!=null)
-        {
-        <QuickGrid Items="@jobModelsQierable" RowClick="OnRowClick">
-            <PropertyColumn Property="@(p=>p.Id)" Title="ID" />
-                <TemplateColumn Title="Модель ">
-                <ChildContent Context="job">
-                    @if (job.VehicleId != null)
-                    {
-                        var veh = Vehicles.Where(p => p.id == job.VehicleId).FirstOrDefault();
-                        if(veh != null)
-                        {
-                            <span>@(veh.fullModelName != null ? veh.fullModelName:"Не знайдено" )</span>
-                        }
-                        else
-                        {
-                            <span>@("Не знайдено")</span>
-
-                        }
-                    }
-                    else
-                    {
-                        <span>@(job.ModelName!=null? job.ModelName:"Не знайдено")</span>
-                    }
-                </ChildContent>
-            </TemplateColumn>
-            <PropertyColumn Property="@(p=>p.Description)" Title="Опис проблеми" />
-            <PropertyColumn Property="@(p=>p.IssueDate)" Title="Дата візиту" />
-            <PropertyColumn Property="@(p=>p.Status)" Title="Статус" />
-            <TemplateColumn Title="Дії">
-                <ChildContent Context="job">
-                    <Button @onclick="() => OnViewJob(job)">Переглянути</Button>
-                    <Button @onclick="() => SelectMechanic(job)">Обрати механіка</Button>
-
-                </ChildContent>
-            </TemplateColumn>
-        </QuickGrid>
-        }
-    </div>
-</AuthorizeView>
-<AuthorizeView Roles="Mechanic">
-    <h3>Мої роботи</h3>
+    <h3>Роботи</h3>
 
     <div>
-        <Select TItem="string" @bind-SelectedValue="selectedStatus" @bind-SelectedValue:after="FilterJobs">
-            @foreach (var status in statuses)
-            {
-                <SelectItem Value="@status">@status</SelectItem>
-            }
-        </Select>
-
-        <QuickGrid Items="@jobModelsQierable" RowClick="OnRowClick">
-            <PropertyColumn Property="@(p => p.Id)" Title="ID" />
-            <TemplateColumn Title="Модель">
-                <ChildContent Context="job">
-                    @if (job.VehicleId != null)
+        <div class="d-flex justify-content-between mb-3">
+            <div class="input-group">
+                <input type="text" class="form-control" placeholder="Пошук..." @bind="searchTerm">
+                <button class="btn btn-outline-secondary" type="button" @onclick="SearchJobs" disabled="@isLoading">
+                    @if (isLoading)
                     {
-                        var vehicle = Vehicles.FirstOrDefault(p => p.id == job.VehicleId);
-                        <span>@(vehicle != null ? vehicle.fullModelName : "Модель не знайдена")</span>
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
                     }
-                    else
-                    {
-                        <span>@(job.ModelName ?? "Модель не вказана")</span>
-                    }
-                </ChildContent>
-            </TemplateColumn>
-            <PropertyColumn Property="@(p => p.Description)" Title="Опис проблеми" />
-            <PropertyColumn Property="@(p => p.IssueDate)" Title="Дата візиту" />
-            <PropertyColumn Property="@(p => p.Status)" Title="Статус" />
-            <TemplateColumn Title="Дії">
-                <ChildContent Context="job">
-                    @if (job.Status == Status.New)
-                    {
-                        <Button @onclick="() => RespondToJob(job)">Відгукнутися</Button>
-                    }
-                    <Button @onclick="() => OnViewJob(job)">Переглянути</Button>
-                </ChildContent>
-            </TemplateColumn>
-        </QuickGrid>
-    </div>
-</AuthorizeView>
-<Modal @bind-Visible="isAddJobModalVisible">
-    @if(selectedJob!=null){
-    <ModalContent>
-        <ModalHeader>
-            <h5 class="modal-title">Нова робота</h5>
-            <Button CloseButton @onclick="() => isAddJobModalVisible = false"></Button>
-        </ModalHeader>
-        <ModalBody>
-            <div class="form-group">
-                <label for="status">Статус</label>
-                    <Select TItem="string" @bind-SelectedValue="selectedJob.Status">
-                    @foreach (var status in statuses.Skip(1))
+                    Пошук
+                </button>
+            </div>
+            <div>
+                <Select TItem="string" @bind-SelectedValue="selectedStatus" @bind-SelectedValue:after="SearchJobs">
+                    @foreach (var status in statuses)
                     {
                         <SelectItem Value="@status">@status</SelectItem>
                     }
                 </Select>
             </div>
-            @if (isAdmin && mechanics != null)
-            {
-                <div class="mb-3">
-                    <label for="mechanic" class="form-label">Механік</label>
-                    <select id="mechanic" class="form-select" @bind="selectedJob.MechanicId">
-                        @foreach (var mechanic in mechanics)
-                        {
-                            <option value="@mechanic.Id" selected="@(selectedJob.MechanicId == mechanic.Id ? "selected" : null)">
-                                @mechanic.UserName
-                            </option>
-                        }
-                    </select>
+        </div>
 
+        @if (selectedStatus != "all")
+        {
+            <div class="mb-3">
+                <span class="badge bg-info">
+                    Статус: @selectedStatus
+                    <button type="button" class="btn-close btn-close-white ms-2" @onclick="ClearStatusFilter"></button>
+                </span>
+            </div>
+        }
+
+        @if (isLoading)
+        {
+            <div class="text-center my-4">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Завантаження...</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            @if (Vehicles != null)
+            {
+                <QuickGrid Items="@jobModelsQierable" RowClick="OnRowClick">
+                    <PropertyColumn Property="@(p=>p.Id)" Title="ID" />
+                    <TemplateColumn Title="Модель ">
+                        <ChildContent Context="job">
+                            @if (job.VehicleId != null)
+                            {
+                                var veh = Vehicles.Where(p => p.id == job.VehicleId).FirstOrDefault();
+                                if (veh != null)
+                                {
+                                    <span>@(veh.fullModelName != null ? veh.fullModelName : "Не знайдено")</span>
+                                }
+                                else
+                                {
+                                    <span>@("Не знайдено")</span>
+
+                                }
+                            }
+                            else
+                            {
+                                <span>@(job.ModelName != null ? job.ModelName : "Не знайдено")</span>
+                            }
+                        </ChildContent>
+                    </TemplateColumn>
+                    <PropertyColumn Property="@(p=>p.Description)" Title="Опис проблеми" Sortable="true" />
+                    <PropertyColumn Property="@(p=>p.IssueDate)" Title="Дата візиту" Sortable="true" />
+                    <PropertyColumn Property="@(p=>p.Status)" Title="Статус" Sortable="true" />
+                    <TemplateColumn Title="Дії">
+                        <ChildContent Context="job">
+                            <Button @onclick="() => OnViewJob(job)">Переглянути</Button>
+                            <Button @onclick="() => SelectMechanic(job)">Обрати механіка</Button>
+
+                        </ChildContent>
+                    </TemplateColumn>
+                </QuickGrid>
+
+                @* Pagination controls *@
+                @if (pagination != null)
+                {
+                    <nav aria-label="Jobs pagination" class="mt-3">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item @(pagination.HasPrevious == false ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => ChangePage(1)" disabled="@(pagination.HasPrevious == false)">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </button>
+                            </li>
+                            <li class="page-item @(pagination.HasPrevious == false ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => ChangePage(currentPage - 1)" disabled="@(pagination.HasPrevious == false)">
+                                    <i class="fas fa-angle-left"></i>
+                                </button>
+                            </li>
+
+                            @for (int apage = GetStartPage(); apage <= GetEndPage(); apage++)
+                            {
+                                int pageNumber = apage;
+                                <li class="page-item @(apage == currentPage ? "active" : "")">
+                                    <button class="page-link" @onclick="() => ChangePage(pageNumber)">@apage</button>
+                                </li>
+                            }
+
+                            <li class="page-item @(pagination.HasNext == false ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => ChangePage(currentPage + 1)" disabled="@(pagination.HasNext == false)">
+                                    <i class="fas fa-angle-right"></i>
+                                </button>
+                            </li>
+                            <li class="page-item @(pagination.HasNext == false ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => ChangePage(pagination.TotalPages)" disabled="@(pagination.HasNext == false)">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </button>
+                            </li>
+                        </ul>
+                    </nav>
+
+                    @* Page info *@
+                    <div class="text-center text-muted">
+                        Сторінка @currentPage з @pagination.TotalPages (Всього: @((pagination.TotalPages - 1) * pagination.PageSize + pagination.Items.Count) записів)
+                    </div>
+                }
+            }
+        }
+    </div>
+</AuthorizeView>
+
+<AuthorizeView Roles="Mechanic">
+    <h3>Мої роботи</h3>
+
+    <div>
+        <div class="d-flex justify-content-between mb-3">
+            <div class="input-group">
+                <input type="text" class="form-control" placeholder="Пошук..." @bind="searchTerm">
+                <button class="btn btn-outline-secondary" type="button" @onclick="SearchJobs" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    }
+                    Пошук
+                </button>
+            </div>
+            <div>
+                <Select TItem="string" @bind-SelectedValue="selectedStatus" @bind-SelectedValue:after="SearchJobs">
+                    @foreach (var status in statuses)
+                    {
+                        <SelectItem Value="@status">@status</SelectItem>
+                    }
+                </Select>
+            </div>
+        </div>
+
+        @if (selectedStatus != "all")
+        {
+            <div class="mb-3">
+                <span class="badge bg-info">
+                    Статус: @selectedStatus
+                    <button type="button" class="btn-close btn-close-white ms-2" @onclick="ClearStatusFilter"></button>
+                </span>
+            </div>
+        }
+
+        @if (isLoading)
+        {
+            <div class="text-center my-4">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Завантаження...</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            <QuickGrid Items="@jobModelsQierable" RowClick="OnRowClick">
+                <PropertyColumn Property="@(p => p.Id)" Title="ID" />
+                <TemplateColumn Title="Модель">
+                    <ChildContent Context="job">
+                        @if (job.VehicleId != null)
+                        {
+                            var vehicle = Vehicles.FirstOrDefault(p => p.id == job.VehicleId);
+                            <span>@(vehicle != null ? vehicle.fullModelName : "Модель не знайдена")</span>
+                        }
+                        else
+                        {
+                            <span>@(job.ModelName ?? "Модель не вказана")</span>
+                        }
+                    </ChildContent>
+                </TemplateColumn>
+                <PropertyColumn Property="@(p => p.Description)" Title="Опис проблеми"  Sortable="true"/>
+                <PropertyColumn Property="@(p => p.IssueDate)" Title="Дата візиту"  Sortable="true"/>
+                <PropertyColumn Property="@(p => p.Status)" Title="Статус" Sortable="true" />
+                <TemplateColumn Title="Дії">
+                    <ChildContent Context="job">
+                        @if (job.Status == Status.New)
+                        {
+                            <Button @onclick="() => RespondToJob(job)">Відгукнутися</Button>
+                        }
+                        <Button @onclick="() => OnViewJob(job)">Переглянути</Button>
+                    </ChildContent>
+                </TemplateColumn>
+            </QuickGrid>
+
+            @* Pagination controls *@
+            @if (pagination != null)
+            {
+                <nav aria-label="Jobs pagination" class="mt-3">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item @(pagination.HasPrevious == false ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => ChangePage(1)" disabled="@(pagination.HasPrevious == false)">
+                                <i class="fas fa-angle-double-left"></i>
+                            </button>
+                        </li>
+                        <li class="page-item @(pagination.HasPrevious == false ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => ChangePage(currentPage - 1)" disabled="@(pagination.HasPrevious == false)">
+                                <i class="fas fa-angle-left"></i>
+                            </button>
+                        </li>
+
+                        @for (int apage = GetStartPage(); apage <= GetEndPage(); apage++)
+                        {
+                            int pageNumber = apage;
+                            <li class="page-item @(apage == currentPage ? "active" : "")">
+                                <button class="page-link" @onclick="() => ChangePage(pageNumber)">@apage</button>
+                            </li>
+                        }
+
+                        <li class="page-item @(pagination.HasNext == false ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => ChangePage(currentPage + 1)" disabled="@(pagination.HasNext == false)">
+                                <i class="fas fa-angle-right"></i>
+                            </button>
+                        </li>
+                        <li class="page-item @(pagination.HasNext == false ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => ChangePage(pagination.TotalPages)" disabled="@(pagination.HasNext == false)">
+                                <i class="fas fa-angle-double-right"></i>
+                            </button>
+                        </li>
+                    </ul>
+                </nav>
+
+                @* Page info *@
+                <div class="text-center text-muted">
+                    Сторінка @currentPage з @pagination.TotalPages (Всього: @((pagination.TotalPages - 1) * pagination.PageSize + pagination.Items.Count) записів)
                 </div>
             }
+        }
+    </div>
+</AuthorizeView>
 
-        </ModalBody>
-        <ModalFooter>
-            <Button @onclick="async() => await SaveJob()">Зберегти</Button>
-            <Button @onclick="() => isAddJobModalVisible = false">Закрити</Button>
-        </ModalFooter>
-    </ModalContent>
+<Modal @bind-Visible="isAddJobModalVisible">
+    @if (selectedJob != null)
+    {
+        <ModalContent>
+            <ModalHeader>
+                <h5 class="modal-title">Нова робота</h5>
+                <Button CloseButton @onclick="() => isAddJobModalVisible = false"></Button>
+            </ModalHeader>
+            <ModalBody>
+                <div class="form-group">
+                    <label for="status">Статус</label>
+                    <Select TItem="string" @bind-SelectedValue="selectedJob.Status">
+                        @foreach (var status in statuses.Skip(1))
+                        {
+                            <SelectItem Value="@status">@status</SelectItem>
+                        }
+                    </Select>
+                </div>
+                @if (isAdmin && mechanics != null)
+                {
+                    <div class="mb-3">
+                        <label for="mechanic" class="form-label">Механік</label>
+                        <select id="mechanic" class="form-select" @bind="selectedJob.MechanicId">
+                            @foreach (var mechanic in mechanics)
+                            {
+                                <option value="@mechanic.Id" selected="@(selectedJob.MechanicId == mechanic.Id ? "selected" : null)">
+                                    @mechanic.UserName
+                                </option>
+                            }
+                        </select>
+
+                    </div>
+                }
+
+            </ModalBody>
+            <ModalFooter>
+                <Button @onclick="async() => await SaveJob()">Зберегти</Button>
+                <Button @onclick="() => isAddJobModalVisible = false">Закрити</Button>
+            </ModalFooter>
+        </ModalContent>
     }
 </Modal>
 
@@ -164,18 +323,22 @@
 {
     <div class="alert alert-danger mt-3">@errorMessage</div>
 }
+
 @code {
     private JobVM? selectedJob;
     public bool isPopupVisible;
     private string errorMessage;
     bool isAdmin { get; set; }
-   
-    private List<JobVM> jobs = new();
-    private List<JobVM> filteredJobs = new();
+
     private List<MechanicViewModel> mechanics;
     private List<VehicleViewModel> Vehicles;
 
-
+    // Pagination and search properties
+    private Pagination<JobVM> pagination;
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private string searchTerm = string.Empty;
+    private bool isLoading = false;
 
     private IQueryable<JobVM> jobModelsQierable = Enumerable.Empty<JobVM>().AsQueryable();
     private List<string> statuses = new() { "all", "New", "Pending", "InProgress", "Completed" };
@@ -189,98 +352,136 @@
         if (user.Identity.IsAuthenticated)
         {
             var roles = user.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
-            // Опрацюйте ролі користувача тут   
+
             try
             {
-                isAdmin = false;
-                if (roles.FirstOrDefault().Equals("Admin"))
-                {
-                    isAdmin = true;
-                    var jobsVMs = await JobService.GetAllJobs();
+                isAdmin = roles.FirstOrDefault()?.Equals("Admin") == true;
 
-                    jobs = jobsVMs.ToList();
+                var Vehiclesvms = await VehickeService.GetCarModelsAsync();
+                if (Vehiclesvms != null)
+                    Vehicles = Vehiclesvms.ToList();
 
-                }
-                if (roles.FirstOrDefault().Equals("Mechanic"))
-                {
-                    var jobsVMs = await JobService.GetJobByMechanicId(Guid.Parse(user.Claims.Where(c => c.Type == ClaimTypes.NameIdentifier).FirstOrDefault().Value));
-                    jobs = jobsVMs.ToList();
-                }
-                var  Vehiclesvms = await VehickeService.GetCarModelsAsync();
-                if(Vehiclesvms!=null)
-                Vehicles = Vehiclesvms.ToList();
-                
                 var mechs = await UserService.GetMechanics();
-                if(mechs!=null)
-                mechanics = mechs.ToList(); 
+                if (mechs != null)
+                    mechanics = mechs.ToList();
+
+                await LoadJobsAsync();
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                errorMessage = e.Message;
+                HandleError(e);
+            }
+        }
+    }
+
+    private async Task LoadJobsAsync()
+    {
+        if (isLoading) return;
+
+        isLoading = true;
+        try
+        {
+            var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authenticationState.User;
+            var roles = user.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
+
+            // Get current status filter (convert "all" to null)
+            Status? statusFilter = null;
+            if (selectedStatus != "all")
+            {
+                if (selectedStatus == "New")
+                {
+                    statusFilter = Status.New;
+                }
+                else
+                {
+                    statusFilter = Enum.Parse<Status>(selectedStatus);
+                }
             }
 
+            if (roles.FirstOrDefault()?.Equals("Admin") == true)
+            {
+                pagination = await JobService.GetAllJobsPaginatedAsync(currentPage, pageSize, searchTerm, statusFilter);
+            }
+            else if (roles.FirstOrDefault()?.Equals("Mechanic") == true)
+            {
+                var mechanicId = Guid.Parse(user.Claims.Where(c => c.Type == ClaimTypes.NameIdentifier).FirstOrDefault().Value);
+                pagination = await JobService.GetJobsByMechanicPaginatedAsync(mechanicId, currentPage, pageSize, searchTerm, statusFilter);
+            }
 
-            jobModelsQierable = jobs.AsQueryable();
-
+            jobModelsQierable = pagination?.Items?.AsQueryable() ?? Enumerable.Empty<JobVM>().AsQueryable();
+            errorMessage = null;
         }
-
-        FilterJobs();
-
-        jobModelsQierable = jobs.AsQueryable();
+        catch (Exception e)
+        {
+            HandleError(e);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
     }
+
+    private async Task ChangePage(int newPage)
+    {
+        if (newPage < 1 || (pagination != null && newPage > pagination.TotalPages) || newPage == currentPage)
+            return;
+
+        currentPage = newPage;
+        await LoadJobsAsync();
+    }
+
+    private int GetStartPage()
+    {
+        if (pagination == null) return 1;
+        return Math.Max(1, currentPage - 2);
+    }
+
+    private int GetEndPage()
+    {
+        if (pagination == null) return 1;
+        return Math.Min(pagination.TotalPages, currentPage + 2);
+    }
+
+    private async Task SearchJobs()
+    {
+        currentPage = 1; // Reset to first page
+        await LoadJobsAsync();
+    }
+
+    private async Task ClearStatusFilter()
+    {
+        selectedStatus = "all";
+        currentPage = 1; // Reset to first page
+        await LoadJobsAsync();
+    }
+
+    private void HandleError(Exception e)
+    {
+        errorMessage = e.Message.Contains("The input does not contain any JSON tokens.")
+            ? "No jobs found"
+            : e.Message;
+    }
+
     private async void SelectMechanic(JobVM job)
     {
-        // Show the modal and set the selected job
         isAddJobModalVisible = true;
         selectedJob = job;
-
     }
 
     private async void RespondToJob(JobVM job)
     {
         isAddJobModalVisible = true;
         selectedJob = job;
-
-    }
-
-    private void FilterJobs()
-    {
-        if (selectedStatus == "New")
-        {
-            filteredJobs = jobs.Where(job => job.Status == Status.New || job.MechanicId == null).OrderByDescending(job => job.IssueDate).ToList();
-        }
-        else if (selectedStatus == "Pending")
-        {
-            filteredJobs = jobs.Where(job => job.Status == Status.Pending).OrderByDescending(job => job.IssueDate).ToList();
-        }
-        else if (selectedStatus == "InProgress")
-        {
-            filteredJobs = jobs.Where(job => job.Status == Status.InProgress).OrderByDescending(job => job.IssueDate).ToList();
-        }
-        else if (selectedStatus == "Completed")
-        {
-            filteredJobs = jobs.Where(job => job.Status == Status.Completed).OrderByDescending(job => job.IssueDate).ToList();
-        }
-        else
-        {
-            filteredJobs = jobs.OrderByDescending(job => job.IssueDate).ToList();
-        }
-        jobModelsQierable = filteredJobs.AsQueryable();
     }
 
     private async Task SaveJob()
     {
-        // Check if the status has changed before updating
-    
-            await JobService.UpdateStatus(selectedJob.Id.Value, selectedJob.Status.Value);
-            FilterJobs();
-        
-        // Check if the mechanic has changed
-       
-            await JobService.UpdateMecahin(selectedJob.Id.Value, selectedJob.MechanicId.Value);
-        
+        await JobService.UpdateStatus(selectedJob.Id.Value, selectedJob.Status.Value);
+        await JobService.UpdateMecahin(selectedJob.Id.Value, selectedJob.MechanicId.Value);
 
-        FilterJobs();
+        await LoadJobsAsync(); // Reload current page
         isAddJobModalVisible = false;
     }
 

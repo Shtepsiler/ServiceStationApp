@@ -15,5 +15,11 @@ namespace BlazorApp.Services.Interfaces
         Task AddOrder(Guid id, Guid OrderId);
         Task UpdateStatus(Guid Id, Status Status);
         Task UpdateMecahin(Guid Id, Guid MechanicId);
+
+        Task<Pagination<JobVM>> GetJobsByMechanicPaginatedAsync(Guid mechanicId, int pageNumber,
+            int pageSize, string searchTerm = "", Status? status = null);
+        Task<Pagination<JobVM>> GetAllJobsPaginatedAsync(int pageNumber, int pageSize,
+            string searchTerm = "", Status? status = null);
+        Task<Pagination<JobVMForUser>> GetJobsByUserIdPaginatedAsync(Guid userId, int pageNumber, int pageSize, string searchTerm = "", Status? status = null);
     }
 }

@@ -1,0 +1,270 @@
+﻿@page "/statistics/parts"
+@using BlazorApp.Extensions.ViewModels.PPModel
+@using BlazorApp.Services.Interfaces
+@using Microsoft.AspNetCore.Authorization
+@inject IPartsMLService PartsMLService
+@inject IJSRuntime JS
+
+@attribute [Authorize(Roles = "Admin")]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/statistics">Статистика</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Автозапчастини</li>
+    </ol>
+</nav>
+
+<h3>Статистика Моделі Автозапчастин</h3>
+
+@if (isLoading)
+{
+    <div class="text-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Завантаження...</span>
+        </div>
+        <p class="mt-2">Завантаження даних...</p>
+    </div>
+}
+else
+{
+    <!-- Health Check -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5>Стан Системи</h5>
+            <button class="btn btn-outline-primary btn-sm" @onclick="LoadHealthStatus">
+                <i class="fas fa-heartbeat"></i> Перевірити
+            </button>
+        </div>
+        <div class="card-body">
+            @if (healthStatus != null)
+            {
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <i class="fas fa-circle text-@(GetStatusColor(healthStatus.status)) fa-2x"></i>
+                            <p class="mt-2 mb-0">@healthStatus.status.ToUpper()</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <i class="fas fa-@(healthStatus.ml_model_loaded ? "check-circle text-success" : "times-circle text-danger") fa-2x"></i>
+                            <p class="mt-2 mb-0">Модель</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <i class="fas fa-@(healthStatus.redis_connected ? "database text-success" : "database text-danger") fa-2x"></i>
+                            <p class="mt-2 mb-0">Redis</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h5 class="text-info">@healthStatus.version</h5>
+                            <p class="mb-0">Версія</p>
+                        </div>
+                    </div>
+                </div>
+                @if (healthStatus.uptime_seconds.HasValue)
+                {
+                    <div class="mt-3 text-center">
+                        <small class="text-muted">Uptime: @TimeSpan.FromSeconds(healthStatus.uptime_seconds.Value).ToString(@"hh\:mm\:ss")</small>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    <!-- Model Status -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5>Статистика Моделі</h5>
+            <button class="btn btn-outline-primary btn-sm" @onclick="LoadModelStatus">
+                <i class="fas fa-sync-alt"></i> Оновити
+            </button>
+        </div>
+        <div class="card-body">
+            @if (modelStatus != null)
+            {
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h4 class="text-primary">@modelStatus.accuracy.ToString("P2")</h4>
+                            <p class="mb-0">Точність</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h4 class="text-info">@modelStatus.total_predictions</h4>
+                            <p class="mb-0">Всього передбачень</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h4 class="text-success">@modelStatus.feedback_count</h4>
+                            <p class="mb-0">Зворотний зв'язок</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h4 class="text-warning">@modelStatus.active_learning_queue</h4>
+                            <p class="mb-0">Черга навчання</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <p><strong>Версія моделі:</strong> @modelStatus.ml_model_version</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Останнє перетренування:</strong> @(modelStatus.last_retrain?.ToString("yyyy-MM-dd HH:mm") ?? "Ніколи")</p>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+   
+    <!-- Metrics -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5>Детальні Метрики</h5>
+            <button class="btn btn-outline-primary btn-sm" @onclick="LoadMetrics">
+                <i class="fas fa-chart-line"></i> Оновити
+            </button>
+        </div>
+        <div class="card-body">
+            @if (metrics != null)
+            {
+                <div class="alert alert-success">
+                    <pre>@System.Text.Json.JsonSerializer.Serialize(metrics, new System.Text.Json.JsonSerializerOptions { WriteIndented = true })</pre>
+                </div>
+            }
+            else
+            {
+                <div class="text-center text-muted">
+                    <i class="fas fa-chart-line fa-3x"></i>
+                    <p class="mt-2">Натисніть "Оновити" для завантаження метрик</p>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert alert-danger mt-3">
+        <i class="fas fa-exclamation-triangle"></i> @message
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success mt-3">
+        <i class="fas fa-check-circle"></i> @successMessage
+    </div>
+}
+
+@code {
+    private HealthResponse healthStatus;
+    private ModelStatus modelStatus;
+    private PredictionResponse lastPredictionResponse;
+    private object metrics;
+
+    private string correctPartsInput = "";
+    private int sampleLimit = 10;
+    private bool isLoading = true;
+    private bool isLoadingUncertain = false;
+    private bool isSubmittingUncertain = false;
+    private bool isSubmittingManual = false;
+    private bool isTestingPrediction = false;
+    private string message = "";
+    private string successMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialData();
+    }
+
+    private async Task LoadInitialData()
+    {
+        isLoading = true;
+        message = "";
+        successMessage = "";
+
+        try
+        {
+            await Task.WhenAll(
+                LoadHealthStatus(),
+                LoadModelStatus()
+            );
+        }
+        catch (Exception e)
+        {
+            message = $"Помилка ініціалізації: {e.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadHealthStatus()
+    {
+        try
+        {
+            healthStatus = await PartsMLService.GetHealth();
+        }
+        catch (Exception e)
+        {
+            message = $"Помилка завантаження стану системи: {e.Message}";
+        }
+    }
+
+    private async Task LoadModelStatus()
+    {
+        try
+        {
+            modelStatus = await PartsMLService.GetStatus();
+        }
+        catch (Exception e)
+        {
+            message = $"Помилка завантаження статистики моделі: {e.Message}";
+        }
+    }
+
+  
+    private async Task LoadMetrics()
+    {
+        try
+        {
+            metrics = await PartsMLService.GetMetrics();
+            successMessage = "Метрики оновлено";
+        }
+        catch (Exception e)
+        {
+            message = $"Помилка завантаження метрик: {e.Message}";
+        }
+    }
+
+    private string GetStatusColor(string status)
+    {
+        return status.ToLower() switch
+        {
+            "healthy" => "success",
+            "degraded" => "warning",
+            "unhealthy" => "danger",
+            _ => "secondary"
+        };
+    }
+
+    // Helper class for uncertain samples
+    public class UncertainSampleVM
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public string PredictionId { get; set; } = "";
+        public string ProblemDescription { get; set; } = "";
+        public float Confidence { get; set; }
+        public string CorrectPart { get; set; } = "";
+    }
+}

@@ -1,0 +1,43 @@
+﻿@page "/payment"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<h3>Система Оплати</h3>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Роботи</h5>
+            </div>
+            <div class="card-body">
+                <p>Перегляд та управління оплатами за виконані роботи</p>
+                <a href="/payment/jobs" class="btn btn-primary">Переглянути Роботи</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Замовлення</h5>
+            </div>
+            <div class="card-body">
+                <p>Перегляд та управління оплатами за замовлення</p>
+                <a href="/payment/orders" class="btn btn-primary">Переглянути Замовлення</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h6>Інформація про систему оплати:</h6>
+            <ul>
+                <li>Всі платежі обробляються через блокчейн</li>
+                <li>Статус оплати оновлюється в реальному часі</li>
+                <li>Історія всіх транзакцій зберігається у смарт-контракті</li>
+            </ul>
+        </div>
+    </div>
+</div>

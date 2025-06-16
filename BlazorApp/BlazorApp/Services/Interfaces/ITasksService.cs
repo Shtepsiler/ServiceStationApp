@@ -1,5 +1,4 @@
 ﻿using BlazorApp.Extensions.ViewModels.JobsVMs;
-using System.Collections.Generic;
 
 namespace BlazorApp.Services.Interfaces
 {
@@ -13,5 +12,6 @@ namespace BlazorApp.Services.Interfaces
         Task UpdateTask(TaskViewModel taskViewModel);
         Task<IEnumerable<TaskViewModel>> GetTasksByJobId(Guid Id);
         Task UpdateTaskStatus(Guid id, string status);
+        Task<Pagination<TaskViewModel>> GetTasksPaginatedAsync(int pageNumber, int pageSize, string searchTerm = "", Guid? mechanicId = null, TaskStatus? status = null);
     }
 }

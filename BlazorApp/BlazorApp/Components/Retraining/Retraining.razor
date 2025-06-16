@@ -1,0 +1,88 @@
+﻿@page "/retraining"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin, Mechanic")]
+
+<h3>Система Перетренування Моделей</h3>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Модель Спеціалізацій</h5>
+            </div>
+            <div class="card-body">
+                <p>Перетренування моделі для класифікації спеціалізацій на основі опису проблем</p>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-check text-success"></i> Лейблінг невизначених зразків</li>
+                    <li><i class="fas fa-check text-success"></i> Активне навчання</li>
+                    <li><i class="fas fa-check text-success"></i> Статистика моделі</li>
+                </ul>
+                <a href="/retraining/specializations" class="btn btn-primary">
+                    <i class="fas fa-tools"></i> Керування Моделлю
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Модель Автозапчастин</h5>
+            </div>
+            <div class="card-body">
+                <p>Перетренування моделі для визначення несправних автозапчастин</p>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-check text-success"></i> Зворотний зв'язок від користувачів</li>
+                    <li><i class="fas fa-check text-success"></i> Невизначені передбачення</li>
+                    <li><i class="fas fa-check text-success"></i> Тестування моделі</li>
+                </ul>
+                <a href="/retraining/parts" class="btn btn-primary">
+                    <i class="fas fa-car"></i> Керування Моделлю
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Загальна Інформація</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Принципи Активного Навчання:</h6>
+                        <ul>
+                            <li><strong>Невизначеність</strong> - модель запитує мітки для зразків з низькою впевненістю</li>
+                            <li><strong>Зворотний зв'язок</strong> - користувачі надають корекції для покращення точності</li>
+                            <li><strong>Інкрементальне навчання</strong> - модель навчається на нових даних без повного перетренування</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Рекомендації:</h6>
+                        <ul>
+                            <li>Регулярно перевіряйте невизначені зразки</li>
+                            <li>Надавайте якісні мітки для покращення моделі</li>
+                            <li>Моніторьте метрики якості після перетренування</li>
+                            <li>Тестуйте модель на реальних даних</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h6><i class="fas fa-info-circle"></i> Важливо:</h6>
+            <p class="mb-0">
+                Перетренування моделей доступне лише адміністраторам.
+                Будь ласка, будьте обережні при роботі з даними навчання та завжди робіть резервні копії перед внесенням змін.
+            </p>
+        </div>
+    </div>
+</div>

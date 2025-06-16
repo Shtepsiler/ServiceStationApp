@@ -1,24 +1,209 @@
 ﻿@implements IDisposable
 @inject NavigationManager NavigationManager
 
+<style>
+    .navbar {
+        background: #ffffff !important;
+        border-bottom: 1px solid #dee2e6;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        padding: 1rem 0;
+    }
+
+    .navbar-brand img {
+        height: 45px;
+        margin-left: 15px;
+        transition: opacity 0.2s ease;
+    }
+
+        .navbar-brand img:hover {
+            opacity: 0.8;
+        }
+
+    .navbar-nav {
+        gap: 0.5rem;
+    }
+
+        .navbar-nav .nav-link {
+            color: #495057 !important;
+            font-weight: 500;
+            padding: 0.75rem 1.25rem;
+            transition: all 0.2s ease;
+            border-radius: 6px;
+            margin: 0 4px;
+            font-size: 0.95rem;
+        }
+
+            .navbar-nav .nav-link:hover {
+                color: #007bff !important;
+                background-color: #f8f9fa;
+                transform: translateY(-1px);
+            }
+
+            .navbar-nav .nav-link.active {
+                color: #007bff !important;
+                font-weight: 600;
+                background-color: #e3f2fd;
+            }
+
+    .dropdown-menu {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        padding: 0.75rem 0;
+        margin-top: 8px;
+        min-width: 240px;
+    }
+
+    .dropdown-item {
+        color: #495057 !important;
+        padding: 0.75rem 1.25rem;
+        font-weight: 400;
+        border: none !important;
+        transition: all 0.2s ease;
+        font-size: 0.9rem;
+    }
+
+        .dropdown-item:hover {
+            background-color: #f8f9fa !important;
+            color: #007bff !important;
+            transform: translateX(4px);
+        }
+
+    .dropdown-divider {
+        margin: 0.5rem 0;
+        border-top: 1px solid #e9ecef;
+    }
+
+    .dropdown-submenu {
+        position: relative;
+    }
+
+        .dropdown-submenu .dropdown-menu {
+            top: 0;
+            right: 100%;
+            left: auto;
+            margin-top: -1px;
+            border-radius: 8px;
+            min-width: 200px;
+        }
+
+        .dropdown-submenu:hover .dropdown-menu {
+            display: block;
+        }
+
+        .dropdown-submenu .dropdown-item::after {
+            content: "‹";
+            float: left;
+            margin-right: 15px;
+            margin-left: 0;
+            color: #6c757d;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+    .logout-btn {
+        background: none;
+        border: none;
+        color: #dc3545 !important;
+        padding: 0.75rem 1.25rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: left;
+        width: 100%;
+        font-size: 0.9rem;
+    }
+
+        .logout-btn:hover {
+            background-color: #f8f9fa !important;
+            color: #c82333 !important;
+            transform: translateX(4px);
+        }
+
+    .user-dropdown-toggle {
+        font-weight: 600;
+        color: #007bff !important;
+        padding: 0.75rem 1.25rem !important;
+        border-radius: 6px;
+        background-color: #f8f9fa;
+    }
+
+        .user-dropdown-toggle:hover {
+            background-color: #e3f2fd !important;
+            transform: translateY(-1px);
+        }
+
+    .navbar-toggler {
+        border: 1px solid #dee2e6;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+    }
+
+        .navbar-toggler:focus {
+            box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
+        }
+
+    /* Improved mobile layout */
+    @@media (max-width: 991.98px) {
+        .navbar-nav
+
+    {
+        margin-top: 1rem;
+        text-align: center;
+    }
+
+    .navbar-nav.mx-auto {
+        margin-bottom: 1rem;
+    }
+
+    .dropdown-submenu .dropdown-menu {
+        position: static;
+        float: none;
+        border: none;
+        box-shadow: none;
+        margin-left: 1.5rem;
+        margin-top: 0.5rem;
+        display: none;
+        background-color: #f8f9fa;
+        border-radius: 6px;
+    }
+
+    .dropdown-submenu:hover .dropdown-menu {
+        display: block;
+    }
+
+    .dropdown-item {
+        text-align: left;
+    }
+
+    .user-dropdown-toggle {
+        justify-content: center;
+    }
+
+    }
+</style>
 
 <div class="header">
-    <nav class="navbar navbar-expand-sm bg-body w-100">
+    <nav class="navbar navbar-expand-lg bg-body w-100">
         <div class="container-fluid">
-           <a href="/"> <img src="images/logo.png"  alt="Logo" style="height: 70px; margin-left: 30px; margin-top: 10px;" class="me-auto" /></a>
+            <a href="/" class="navbar-brand">
+                <img src="images/logo.png" alt="Logo" />
+            </a>
+
             <button class="navbar-toggler mt-5" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon" style=""></span>
+                <span class="navbar-toggler-icon"></span>
             </button>
+
             <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
-                <ul class="navbar-nav justify-content-center ms-auto">
+                <ul class="navbar-nav mx-auto">
                     <li class="nav-item">
-                        <NavLink class="nav-link active text-black" href="/" Match="NavLinkMatch.All">Головна</NavLink>
+                        <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">Головна</NavLink>
                     </li>
                     <li class="nav-item">
-                        <NavLink class="nav-link active text-black" href="Services">Сервіси</NavLink>
+                        <NavLink class="nav-link" href="Services">Сервіси</NavLink>
                     </li>
                     <li class="nav-item">
-                        <NavLink class="nav-link active text-black" href="Team">Наша команла</NavLink>
+                        <NavLink class="nav-link" href="Team">Наша команда</NavLink>
                     </li>
                 </ul>
 
@@ -26,52 +211,82 @@
                     <Authorized>
                         <ul class="navbar-nav ms-auto">
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle text-black" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <a class="nav-link dropdown-toggle user-dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     @context.User.Identity?.Name
                                 </a>
-                                <ul class="dropdown-menu" aria-labelledby="userDropdown">
-                                    <li><NavLink class="dropdown-item nav-link  active text-black" href="Account/Manage">Мій кабінет</NavLink></li>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                    <li><NavLink class="dropdown-item" href="Account/Manage">Мій кабінет</NavLink></li>
+                                    <li><hr class="dropdown-divider"></li>
+
                                     @if (context.User.IsInRole("User"))
                                     {
-                                        <li><NavLink class="dropdown-item nav-link active text-black" href="myjobs">Мої візити</NavLink></li>
+                                        <li><NavLink class="dropdown-item" href="myjobs">Мої візити</NavLink></li>
                                     }
                                     else if (context.User.IsInRole("Mechanic"))
                                     {
-                                        <li><NavLink class="dropdown-item nav-link active text-black" href="myjobs">Мої візити</NavLink></li>
-                                        <li><NavLink class="dropdown-item nav-link active text-black" href="jobs">Мої роботи</NavLink></li>
-                                        <li><NavLink class="dropdown-item nav-link active text-black" href="tasks">Мої Завдання</NavLink></li>
-                                        <li><NavLink class="dropdown-item nav-link active text-black" href="catalog">Каталог</NavLink></li>
+                                        <li><NavLink class="dropdown-item" href="myjobs">Мої візити</NavLink></li>
+                                        <li><NavLink class="dropdown-item" href="jobs">Мої роботи</NavLink></li>
+                                        <li><NavLink class="dropdown-item" href="tasks">Мої завдання</NavLink></li>
+                                        <li><NavLink class="dropdown-item" href="catalog">Каталог</NavLink></li>
+                                        <li class="dropdown-submenu">
+                                            <a class="dropdown-item" href="/retraining">Перетренування</a>
+                                            <ul class="dropdown-menu">
+                                                <li><NavLink class="dropdown-item" href="/retraining/specializations">Модель механіків</NavLink></li>
+                                            </ul>
+                                        </li>
                                     }
                                     else if (context.User.IsInRole("Admin"))
                                     {
-                                        <li><NavLink class="dropdown-item nav-link active text-black" href="myjobs">Мої візити</NavLink></li>
-                                        <li><NavLink class="dropdown-item nav-link active text-black" href="jobs">Роботи</NavLink></li>
-                                        <li><NavLink class="dropdown-item nav-link active text-black" href="tasks">Завдання</NavLink></li>
-                                        <li><NavLink class="dropdown-item nav-link active text-black" href="catalog">Каталог</NavLink></li>
-                                        <li><NavLink class="dropdown-item nav-link active text-black" href="/Users">Користувачі</NavLink></li>
-                                        <li><NavLink class="dropdown-item nav-link active text-black" href="/statistics">Статистика</NavLink></li>
-                                        <li><NavLink class="dropdown-item nav-link active text-black" href="/retraining">Перетренування</NavLink></li>
-                                        <li><NavLink class="dropdown-item nav-link active text-black" href="/Сheque">Оплата</NavLink></li>
+                                        <li><NavLink class="dropdown-item" href="myjobs">Мої візити</NavLink></li>
+                                        <li><NavLink class="dropdown-item" href="jobs">Роботи</NavLink></li>
+                                        <li><NavLink class="dropdown-item" href="tasks">Завдання</NavLink></li>
+                                        <li><NavLink class="dropdown-item" href="catalog">Каталог</NavLink></li>
+                                        <li><NavLink class="dropdown-item" href="/Users">Користувачі</NavLink></li>
 
+                                        <li class="dropdown-submenu">
+                                            <a class="dropdown-item" href="/statistics">Статистика</a>
+                                            <ul class="dropdown-menu">
+                                                <li><NavLink class="dropdown-item" href="/statistics/specializations">Модель механіків</NavLink></li>
+                                                <li><NavLink class="dropdown-item" href="/statistics/parts">Модель запчастин</NavLink></li>
+                                            </ul>
+                                        </li>
+
+                                        <li class="dropdown-submenu">
+                                            <a class="dropdown-item" href="/retraining">Перетренування</a>
+                                            <ul class="dropdown-menu">
+                                                <li><NavLink class="dropdown-item" href="/retraining/specializations">Модель механіків</NavLink></li>
+                                                <li><NavLink class="dropdown-item" href="/retraining/parts">Модель запчастин</NavLink></li>
+                                            </ul>
+                                        </li>
+
+                                        <li class="dropdown-submenu">
+                                            <a class="dropdown-item" href="/payment">Оплата</a>
+                                            <ul class="dropdown-menu">
+                                                <li><NavLink class="dropdown-item" href="/payment/jobs">Роботи</NavLink></li>
+                                                <li><NavLink class="dropdown-item" href="/payment/orders">Замовлення</NavLink></li>
+                                            </ul>
+                                        </li>
                                     }
+
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form action="Account/Logout" method="post" style="margin: 0;">
+                                            <AntiforgeryToken />
+                                            <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                                            <button type="submit" class="logout-btn">Вийти</button>
+                                        </form>
+                                    </li>
                                 </ul>
-                            </li>
-                            <li class="nav-item">
-                                <form action="Account/Logout" method="post">
-                                    <AntiforgeryToken />
-                                    <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                                    <button type="submit" class="nav-link text-black">Вийти</button>
-                                </form>
                             </li>
                         </ul>
                     </Authorized>
                     <NotAuthorized>
                         <ul class="navbar-nav ms-auto">
                             <li class="nav-item">
-                                <NavLink class="nav-link active text-black" href="Account/Register">Зареєструватися</NavLink>
+                                <NavLink class="nav-link" href="Account/Register">Зареєструватися</NavLink>
                             </li>
                             <li class="nav-item">
-                                <NavLink class="nav-link active text-black" href="Account/Login">Увійти</NavLink>
+                                <NavLink class="nav-link" href="Account/Login">Увійти</NavLink>
                             </li>
                         </ul>
                     </NotAuthorized>
@@ -81,7 +296,49 @@
     </nav>
 </div>
 
-    @code {
+<script>
+    // Enable Bootstrap dropdown functionality for submenus
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle submenu hover on desktop
+        const dropdownSubmenus = document.querySelectorAll('.dropdown-submenu');
+
+        dropdownSubmenus.forEach(function(submenu) {
+            submenu.addEventListener('mouseenter', function() {
+                if (window.innerWidth > 991) {
+                    const submenuDropdown = this.querySelector('.dropdown-menu');
+                    if (submenuDropdown) {
+                        submenuDropdown.style.display = 'block';
+                    }
+                }
+            });
+
+            submenu.addEventListener('mouseleave', function() {
+                if (window.innerWidth > 991) {
+                    const submenuDropdown = this.querySelector('.dropdown-menu');
+                    if (submenuDropdown) {
+                        submenuDropdown.style.display = 'none';
+                    }
+                }
+            });
+
+            // Handle click on mobile
+            const submenuLink = submenu.querySelector('a');
+            if (submenuLink) {
+                submenuLink.addEventListener('click', function(e) {
+                    if (window.innerWidth <= 991) {
+                        e.preventDefault();
+                        const submenuDropdown = submenu.querySelector('.dropdown-menu');
+                        if (submenuDropdown) {
+                            submenuDropdown.style.display = submenuDropdown.style.display === 'block' ? 'none' : 'block';
+                        }
+                    }
+                });
+            }
+        });
+    });
+</script>
+
+@code {
     private string? currentUrl;
 
     protected override void OnInitialized()
@@ -100,6 +357,4 @@
     {
         NavigationManager.LocationChanged -= OnLocationChanged;
     }
-
 }
-

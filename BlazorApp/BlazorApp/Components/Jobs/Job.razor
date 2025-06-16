@@ -42,138 +42,645 @@
 
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 
-<PageTitle>Деталі роботи</PageTitle>
-<Metamask SelectedAccountTruncateLength="15" ConnectText="Please Connect" InstallMetamaskText="Please install Metamask" />
+<style>
+    .job-management-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f8f9fa;
+        min-height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
 
-<h3>Деталі роботи</h3>
+    .job-header {
+        background: linear-gradient(135deg, #667eea 0%, #fff 100%);
+        color: white;
+        padding: 40px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+    }
 
-@if (errorMessage != null)
-{
-    <div class="alert alert-danger">@errorMessage</div>
-}
-else if (job != null)
-{
-    <div class="job-details-container">
-        <div class="job-info">
-            <p><strong>ID:</strong> @job.Id.ToString()</p>
-            <p><strong>Модель автомобіля:</strong> @job.ModelName</p>
-            <p><strong>Опис проблеми:</strong> @job.Description</p>
-            <p><strong>Ціна:</strong> @job.Price</p>
-            <p><strong>Дата візиту:</strong> @job.IssueDate.ToString()</p>
-            @if (job.FinishDate != null)
-            {
-                <p><strong>Дата завершення роботи:</strong> @job.FinishDate.Value.ToString()</p>
-            }
+    .job-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .job-id {
+        font-size: 1rem;
+        opacity: 0.9;
+        font-family: "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", monospace;
+        font-weight: 500;
+    }
+
+    .metamask-section {
+        background: #ffffff;
+        border: 1px solid #dee2e6;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        text-align: center;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+
+    .info-card {
+        background: #ffffff;
+        border: 1px solid #dee2e6;
+        border-radius: 12px;
+        padding: 28px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+        .info-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .info-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .info-card h4 {
+            color: #495057;
+            font-size: 1.25rem;
+            margin-bottom: 20px;
+            font-weight: 600;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #f1f3f4;
+        }
+
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid #f8f9fa;
+    }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+    .info-label {
+        font-weight: 600;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+
+    .info-value {
+        color: #212529;
+        font-weight: 500;
+        text-align: right;
+    }
+
+    .price-highlight {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #28a745;
+    }
+
+    .action-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+
+    .btn-modern {
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-primary-modern {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+    }
+
+        .btn-primary-modern:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4);
+        }
+
+    .btn-success-modern {
+        background: linear-gradient(135deg, #28a745, #1e7e34);
+        color: white;
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    }
+
+        .btn-success-modern:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(40, 167, 69, 0.4);
+        }
+
+    .btn-info-modern {
+        background: linear-gradient(135deg, #17a2b8, #138496);
+        color: white;
+        box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
+    }
+
+        .btn-info-modern:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(23, 162, 184, 0.4);
+        }
+
+    .btn-danger-modern {
+        background: linear-gradient(135deg, #dc3545, #c82333);
+        color: white;
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    }
+
+        .btn-danger-modern:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(220, 53, 69, 0.4);
+        }
+
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .status-completed {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .status-pending {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+    }
+
+    .status-paid {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+    }
+
+    .status-inprogress {
+        background: #cce5ff;
+        color: #004085;
+        border: 1px solid #99d6ff;
+    }
+
+    .section-container {
+        background: #ffffff;
+        border: 1px solid #dee2e6;
+        border-radius: 12px;
+        padding: 32px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+
+    .section-title {
+        color: #495057;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 3px solid #e9ecef;
+        position: relative;
+    }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+    .table-container {
+        overflow-x: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        background: white;
+    }
+
+    .quickgrid {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .quickgrid th {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            color: #495057;
+            padding: 16px;
+            font-weight: 700;
+            text-align: left;
+            border-bottom: 2px solid #dee2e6;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .quickgrid td {
+            padding: 16px;
+            border-bottom: 1px solid #f1f3f4;
+            vertical-align: middle;
+            color: #495057;
+        }
+
+        .quickgrid tr:hover {
+            background: linear-gradient(135deg, #f8f9fa, #ffffff);
+        }
+
+        .quickgrid tr:last-child td {
+            border-bottom: none;
+        }
+
+    .select-modern {
+        padding: 8px 12px;
+        border: 2px solid #dee2e6;
+        border-radius: 6px;
+        background: white;
+        font-size: 0.85rem;
+        color: #495057;
+        transition: all 0.2s ease;
+    }
+
+        .select-modern:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+            outline: none;
+        }
+
+    .alert-modern {
+        padding: 16px 20px;
+        border-radius: 8px;
+        margin-bottom: 24px;
+        border: none;
+        font-weight: 500;
+    }
+
+    .alert-danger-modern {
+        background: linear-gradient(135deg, #f8d7da, #f1c2c7);
+        color: #721c24;
+        border-left: 4px solid #dc3545;
+    }
+
+    .alert-success-modern {
+        background: linear-gradient(135deg, #d4edda, #c8e6c9);
+        color: #155724;
+        border-left: 4px solid #28a745;
+    }
+
+    .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 80px;
+        color: #6c757d;
+    }
+
+    .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid #f1f3f4;
+        border-top: 4px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+    }
+
+    @@keyframes spin {
+        0%
+
+    {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+
+    }
+
+    .payment-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .payment-paid {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .payment-unpaid {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    @@media (max-width: 768px) {
+        .job-management-container
+
+    {
+        padding: 16px;
+    }
+
+    .job-header {
+        padding: 24px;
+    }
+
+    .job-title {
+        font-size: 2rem;
+    }
+
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .btn-modern {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .info-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .info-value {
+        text-align: left;
+    }
+
+    .section-container {
+        padding: 20px;
+    }
+
+    }
+</style>
+
+<div class="job-management-container">
+    <PageTitle>Деталі роботи</PageTitle>
+
+    <div class="metamask-section">
+        <Metamask SelectedAccountTruncateLength="15" ConnectText="Please Connect" InstallMetamaskText="Please install Metamask" />
+    </div>
+
+    @if (errorMessage != null)
+    {
+        <div class="alert-modern alert-danger-modern">
+            <strong>Помилка:</strong> @errorMessage
         </div>
-        @if (!job.IsPaid)
-        {
-            <AuthorizeView Roles="Admin,Mechanic">
-                <button class="btn btn-primary mb-3" @onclick="() => AddTask(job.Id)">Додати завдання</button>
-            </AuthorizeView>
-            <AuthorizeView Roles="Admin">
-                <button class="btn btn-primary mb-3" @onclick="PayJob">Оплатити роботу</button>
-            </AuthorizeView>
-        }
-        else
-        {
-            <p><strong>Робота оплачена</strong></p>
-        }
-        @if (job.OrderId != null)
-        {
-            <p><strong>ID Замовлення:</strong> @job.OrderId</p>
-            <p><strong>Ціна:</strong> @order.TotalPrice.Value</p>
+    }
+    else if (job != null)
+    {
+        <div class="job-header">
+            <h1 class="job-title">Управління роботою</h1>
+            <div class="job-id">ID: @job.Id.ToString()</div>
+        </div>
 
-            <button class="btn btn-primary mb-3" @onclick="NavtoOrder">Перейти до замовлення</button>
-            if (order.Status != OrderStatus.Paid) 
-            {
-                <AuthorizeView Roles="Admin"> 
-                    <button class="btn btn-primary mb-3" @onclick="PayOrder">Оплатити замовлення</button> 
-                </AuthorizeView> 
-            } 
-            else{
-                <p><strong>Замовлення оплачене</strong></p>
-            }
-        }
-        else
-        {
-            <AuthorizeView Roles="Admin,Mechanic">
-                <button class="btn btn-primary mb-3" @onclick="AddOrder">Додати замовлення</button>
-            </AuthorizeView>
-        }
-
-        <div class="task-list">
-            <h4>Список завдань</h4>
-            <QuickGrid Items="@taskViewModelsQueryable" Class="table table-striped">
-                <PropertyColumn Property="@(t => t.Name)" Title="Назва" Sortable="true"></PropertyColumn>
-                <PropertyColumn Property="@(t => t.Task)" Title="Опис"></PropertyColumn>
-                <PropertyColumn Property="@(t => t.Price)" Title="Ціна"></PropertyColumn>
-
-                <TemplateColumn Title="Статус" Context="taskContext">
-                    @taskContext.Status
-                    <select value="taskContext.Status" @onchange="(e) => UpdateTaskStatus(taskContext.Id, e.Value.ToString())">
-                        <option value="Pending">Pending</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Completed">Completed</option>
-                    </select>
-                </TemplateColumn>
-
-                <TemplateColumn Title="Механік" Context="taskContext">
-                    @if (taskContext.MechanicId != null)
-                    {
-                        var mech = mechanics.FirstOrDefault(p => p.Id == taskContext.MechanicId);
-                        <span>@(mech != null ? mech.UserName : "Механік не знайдений")</span>
-                    }
-                    else
-                    {
-                        <span>Механік не вказаний</span>
-                    }
-                </TemplateColumn>
-
-                @* Conditionally render these columns based on roles *@
-                @if (isAdminOrMechanic)
+        <div class="info-grid">
+            <div class="info-card">
+                <h4>Інформація про автомобіль</h4>
+                <div class="info-item">
+                    <span class="info-label">Модель:</span>
+                    <span class="info-value">@job.ModelName</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Опис проблеми:</span>
+                    <span class="info-value">@job.Description</span>
+                </div>             
+                <div class="info-item">
+                    <span class="info-label">ID Передбачення::</span>
+                    <span class="info-value">@job.PredictionId</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Ціна роботи:</span>
+                    <span class="info-value price-highlight">@job.Price</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Дата візиту:</span>
+                    <span class="info-value">@job.IssueDate.Value.ToString("dd.MM.yyyy")</span>
+                </div>
+                @if (job.FinishDate != null)
                 {
-                    <TemplateColumn Title="Перейти до завдання" Context="taskContext">
-                        <button class="btn btn-info" @onclick="() => NavigateToTask(taskContext.Id)">Перейти</button>
-                    </TemplateColumn>
-                    <TemplateColumn Title="Дії" Context="taskContext">
-                        <button class="btn btn-danger" @onclick="() => DeleteTask(taskContext.Id)">Видалити</button>
-                    </TemplateColumn>
+                    <div class="info-item">
+                        <span class="info-label">Дата завершення:</span>
+                        <span class="info-value">@job.FinishDate.Value.ToString("dd.MM.yyyy")</span>
+                    </div>
                 }
-            </QuickGrid>
+            </div>
 
+            <div class="info-card">
+                <h4>Статус оплати</h4>
+                <div class="info-item">
+                    <span class="info-label">Статус роботи:</span>
+                    <span class="info-value">
+                        @if (!job.IsPaid)
+                        {
+                            <span class="payment-status payment-unpaid">Не оплачено</span>
+                        }
+                        else
+                        {
+                            <span class="payment-status payment-paid">Оплачено</span>
+                        }
+                    </span>
+                </div>
+                @if (job.OrderId != null)
+                {
+                    <div class="info-item">
+                        <span class="info-label">ID Замовлення:</span>
+                        <span class="info-value">@job.OrderId</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Ціна замовлення:</span>
+                        <span class="info-value price-highlight">@order?.TotalPrice?</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Статус замовлення:</span>
+                        <span class="info-value">
+                            @if (order?.Status != OrderStatus.Paid)
+                            {
+                                <span class="payment-status payment-unpaid">Не оплачено</span>
+                            }
+                            else
+                            {
+                                <span class="payment-status payment-paid">Оплачено</span>
+                            }
+                        </span>
+                    </div>
+                }
+            </div>
+        </div>
 
+        <div class="action-buttons">
+            @if (!job.IsPaid)
+            {
+                <AuthorizeView Roles="Admin,Mechanic">
+                    <button class="btn-modern btn-primary-modern" @onclick="() => AddTask(job.Id)">
+                        Додати завдання
+                    </button>
+                </AuthorizeView>
+                <AuthorizeView Roles="Admin">
+                    <button class="btn-modern btn-success-modern" @onclick="PayJob">
+                        Оплатити роботу
+                    </button>
+                </AuthorizeView>
+            }
+
+            @if (job.OrderId != null)
+            {
+                <button class="btn-modern btn-info-modern" @onclick="NavtoOrder">
+                    Перейти до замовлення
+                </button>
+                @if (order?.Status != OrderStatus.Paid)
+                {
+                    <AuthorizeView Roles="Admin">
+                        <button class="btn-modern btn-success-modern" @onclick="PayOrder">
+                            Оплатити замовлення
+                        </button>
+                    </AuthorizeView>
+                }
+            }
+            else
+            {
+                <AuthorizeView Roles="Admin,Mechanic">
+                    <button class="btn-modern btn-primary-modern" @onclick="AddOrder">
+                        Додати замовлення
+                    </button>
+                </AuthorizeView>
+            }
+        </div>
+
+        <div class="section-container">
+            <h2 class="section-title">Список завдань</h2>
+            <div class="table-container">
+                <QuickGrid Items="@taskViewModelsQueryable" Class="quickgrid">
+                    <PropertyColumn Property="@(t => t.Name)" Title="Назва" Sortable="true" />
+                    <PropertyColumn Property="@(t => t.Task)" Title="Опис" Sortable="true" />
+                    <PropertyColumn Property="@(t => t.Price)" Title="Ціна" Sortable="true" />
+
+                    <TemplateColumn Title="Статус" Context="taskContext">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span class="status-badge @GetStatusClass(taskContext.Status.ToString())">
+                                @taskContext.Status
+                            </span>
+                            <select class="select-modern" value="@taskContext.Status" @onchange="(e) => UpdateTaskStatus(taskContext.Id, e.Value.ToString())">
+                                <option value="Pending">Pending</option>
+                                <option value="InProgress">In Progress</option>
+                                <option value="Completed">Completed</option>
+                            </select>
+                        </div>
+                    </TemplateColumn>
+
+                    <TemplateColumn Title="Механік" Context="taskContext">
+                        @if (taskContext.MechanicId != null)
+                        {
+                            var mech = mechanics?.FirstOrDefault(p => p.Id == taskContext.MechanicId);
+                            <span>@(mech?.UserName ?? "Механік не знайдений")</span>
+                        }
+                        else
+                        {
+                            <span style="color: #6c757d; font-style: italic;">Механік не вказаний</span>
+                        }
+                    </TemplateColumn>
+
+                    @if (isAdminOrMechanic)
+                    {
+                        <TemplateColumn Title="Дії" Context="taskContext">
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn-modern btn-info-modern" style="padding: 6px 12px; font-size: 0.8rem;" @onclick="() => NavigateToTask(taskContext.Id)">
+                                    Перейти
+                                </button>
+                                <button class="btn-modern btn-danger-modern" style="padding: 6px 12px; font-size: 0.8rem;" @onclick="() => DeleteTask(taskContext.Id)">
+                                    Видалити
+                                </button>
+                            </div>
+                        </TemplateColumn>
+                    }
+                </QuickGrid>
+            </div>
         </div>
 
         @if (job.OrderId != null)
         {
-            <div class="parts-list mt-4">
-                <h4>Список запчастин</h4>
-                <QuickGrid Items="@partViewModelsQueryable" Class="table table-striped">
-                    <PropertyColumn Property="@(t => t.PartName)" Title="Назва" Sortable="true"></PropertyColumn>
-                    <PropertyColumn Property="@(t => new string(t.Description.Take(70).ToArray()) + "...")" Title="Опис"></PropertyColumn>
-                    <PropertyColumn Property="@(t => t.ManufacturerNumber)" Title="Номер"></PropertyColumn>
-                    <PropertyColumn Property="@(t => t.PriceRegular)" Title="Ціна"></PropertyColumn>
-                    <PropertyColumn Property="@(t => t.OrderedCount)" Title="Кількість"></PropertyColumn>
-                    <AuthorizeView Roles="Admin,Mechanic">
-                        <ChildContent Context="authContext">
-                            <TemplateColumn Title="Дії">
-                                <button class="btn btn-danger" @onclick="() => DeletePart(context.Id.Value)">Видалити</button>
-                            </TemplateColumn>
-                        </ChildContent>
-                    </AuthorizeView>
-                </QuickGrid>
+            <div class="section-container">
+                <h2 class="section-title">Список запчастин</h2>
+                <div class="table-container">
+                    <QuickGrid Items="@partViewModelsQueryable" Class="quickgrid">
+                        <PropertyColumn Property="@(t => t.PartName)" Title="Назва" Sortable="true" />
+                        <TemplateColumn Title="Опис">
+                            @{
+                                var description = context.Description ?? "";
+                                var truncated = description.Length > 70 ? description.Substring(0, 70) + "..." : description;
+                            }
+                            <span title="@description">@truncated</span>
+                        </TemplateColumn>
+                        <PropertyColumn Property="@(t => t.ManufacturerNumber)" Title="Номер" Sortable="true" />
+                        <PropertyColumn Property="@(t => t.PriceRegular)" Title="Ціна" Sortable="true" />
+                        <PropertyColumn Property="@(t => t.OrderedCount)" Title="Кількість" Sortable="true" />
 
+                        <AuthorizeView Roles="Admin,Mechanic">
+                            <ChildContent Context="authContext">
+                                <TemplateColumn Title="Дії">
+                                    <button class="btn-modern btn-danger-modern" style="padding: 6px 12px; font-size: 0.8rem;" @onclick="() => DeletePart(context.Id.Value)">
+                                        Видалити
+                                    </button>
+                                </TemplateColumn>
+                            </ChildContent>
+                        </AuthorizeView>
+                    </QuickGrid>
+                </div>
             </div>
         }
-    </div>
-}
-else
-{
-    <p>Завантаження...</p>
-}
+    }
+    else
+    {
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>Завантаження деталей роботи...</p>
+        </div>
+    }
+</div>
 
 @code {
-
     [Microsoft.AspNetCore.Components.Parameter]
     public Guid jobId { get; set; }
     private bool isAdminOrMechanic;
@@ -188,12 +695,22 @@ else
     private IQueryable<TaskViewModel> taskViewModelsQueryable = Enumerable.Empty<TaskViewModel>().AsQueryable();
     private IQueryable<PartViewModel> partViewModelsQueryable = Enumerable.Empty<PartViewModel>().AsQueryable();
 
-
     string SelectedAccount { get; set; }
     long SelectedChainId { get; set; }
     string BlockHash { get; set; }
     IEthereumHostProvider _ethereumHostProvider;
 
+    private string GetStatusClass(string status)
+    {
+        return status?.ToLower() switch
+        {
+            "completed" => "status-completed",
+            "pending" => "status-pending",
+            "inprogress" => "status-inprogress",
+            "in progress" => "status-inprogress",
+            _ => "status-pending"
+        };
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -227,7 +744,6 @@ else
                     order = await OrderService.GetOrderByIdAsync(job.OrderId.Value);
                     var partsVMs = await OrderService.GetPartsByOrderIdAsync(job.OrderId.Value);
                     partViewModelsQueryable = partsVMs.ToList().AsQueryable();
-
                 }
 
                 var Vehiclesvms = await VehicleService.GetCarModelsAsync();
@@ -247,8 +763,9 @@ else
             errorMessage = $"Помилка завантаження деталей роботи: {ex.Message}";
         }
     }
+
     public void Dispose()
-    {           
+    {
         if (_ethereumHostProvider != null)
         {
             _ethereumHostProvider.SelectedAccountChanged -= HostProvider_SelectedAccountChanged;
@@ -264,17 +781,14 @@ else
 
     private async void AddOrder()
     {
-
-        var res = await OrderService.GetNewOrder(job.ClientId.Value,job.Id.Value);
+        var res = await OrderService.GetNewOrder(job.ClientId.Value, job.Id.Value);
         job.OrderId = res.Id;
         await JobService.AddOrder(job.Id.Value, res.Id.Value);
-
-
         NavigationManager.NavigateTo($"/orders/{res.Id}");
     }
+
     private async void NavtoOrder()
     {
-
         NavigationManager.NavigateTo($"/orders/{job.OrderId}");
     }
 
@@ -287,11 +801,7 @@ else
     {
         try
         {
-
-            // Оновлення статусу завдання через сервіс
-            await TasksService.UpdateTaskStatus(id, status.Replace(" ",""));
-
-            // Оновлення списку завдань після зміни статусу
+            await TasksService.UpdateTaskStatus(id, status.Replace(" ", ""));
             await RefreshTaskList();
         }
         catch (Exception ex)
@@ -300,7 +810,6 @@ else
         }
     }
 
-
     private async Task DeleteTask(Guid taskId)
     {
         try
@@ -308,13 +817,13 @@ else
             await TasksService.DeleteTask(taskId);
             tasks = (await TasksService.GetTasksByJobId(job.Id.Value)).ToList();
             taskViewModelsQueryable = tasks.AsQueryable();
-
         }
         catch (Exception ex)
         {
             errorMessage = $"Помилка видалення завдання: {ex.Message}";
         }
     }
+
     private async Task DeletePart(Guid partid)
     {
         try
@@ -322,18 +831,17 @@ else
             await OrderService.RemovePartFromOrderAsync(job.OrderId.Value, partid);
             var partsVMs = await OrderService.GetPartsByOrderIdAsync(job.OrderId.Value);
             partViewModelsQueryable = partsVMs.ToList().AsQueryable();
-
         }
         catch (Exception ex)
         {
             errorMessage = $"Помилка видалення запчастини: {ex.Message}";
         }
     }
+
     private async Task RefreshTaskList()
     {
         try
         {
-            // Отримання оновленого списку завдань
             var tasksVMs = await TasksService.GetTasksByJobId(job.Id.Value);
 
             if (tasksVMs != null && tasksVMs.Any())
@@ -353,7 +861,6 @@ else
         }
     }
 
-
     private async Task PayOrder()
     {
         try
@@ -361,122 +868,193 @@ else
             var web3 = await _ethereumHostProvider.GetWeb3Async();
             var serv = new ServiceCenterPaymentServiceBase(web3, "0x5fbdb2315678afecb367f032d93f642f64180aa3");
 
-            // Отримуємо замовлення
             var ord = await OrderService.GetOrderByIdAsync(job.OrderId.Value);
             if (!ord.OrderIndex.HasValue)
             {
-                errorMessage = "Зачекайте обробки замовлення блокчейном";
-               
-                this.StateHasChanged();
+                await InvokeAsync(() =>
+                {
+                    errorMessage = "Зачекайте обробки замовлення блокчейном";
+                    StateHasChanged();
+                });
                 return;
             }
 
-            if(ord.IsPaid == true){
-                errorMessage = "Замовлення оплачене";
-                               
-                this.StateHasChanged();
+            if (ord.IsPaid == true)
+            {
+                await InvokeAsync(() =>
+                {
+                    errorMessage = "Замовлення оплачене";
+                    StateHasChanged();
+                });
                 return;
             }
-            // Перевіряємо чи можна спарсити ціну
+
             if (!BigInteger.TryParse(ord.WEIPrice, out var amountToSend))
             {
-                errorMessage = "Некоректна сума для платежу";               
-                this.StateHasChanged();
+                await InvokeAsync(() =>
+                {
+                    errorMessage = "Некоректна сума для платежу";
+                    StateHasChanged();
+                });
                 return;
             }
 
-            // Отримуємо адресу першого доступного акаунта
             var accounts = await web3.Eth.Accounts.SendRequestAsync();
             if (accounts == null || accounts.Length == 0)
             {
-                errorMessage = "Не знайдено жодного акаунта";
-                this.StateHasChanged();
+                await InvokeAsync(() =>
+                {
+                    errorMessage = "Не знайдено жодного акаунта";
+                    StateHasChanged();
+                });
                 return;
             }
 
             var fromAddress = accounts[0];
 
-            // Отримуємо актуальний nonce для транзакції
-            var nonce = await web3.Eth.Transactions.GetTransactionCount.SendRequestAsync(fromAddress);
-
-            // Відправляємо транзакцію
-            var tr = await serv.PayOrderRequestAndWaitForReceiptAsync(new PayOrderFunction()
+            // Перевіряємо баланс
+            var balance = await web3.Eth.GetBalance.SendRequestAsync(fromAddress);
+            if (balance.Value < amountToSend)
+            {
+                await InvokeAsync(() =>
                 {
-                    Nonce = (BigInteger)nonce.Value, // Встановлюємо коректний nonce
+                    errorMessage = "Недостатньо коштів на рахунку";
+                    StateHasChanged();
+                });
+                return;
+            }
+
+            // Отримуємо gas price
+            var gasPrice = await web3.Eth.GasPrice.SendRequestAsync();
+
+            var tr = await serv.PayOrderRequestAsync(new PayOrderFunction()
+                {
                     AmountToSend = amountToSend,
                     FromAddress = fromAddress,
-                    OrderIndex = (BigInteger)ord.OrderIndex
+                    OrderIndex = (BigInteger)ord.OrderIndex,
+                    GasPrice = gasPrice,
+                    Gas = 300000
                 });
+
+            await InvokeAsync(() =>
+            {
+                errorMessage = $"Транзакція відправлена: {tr}";
+                StateHasChanged();
+            });
         }
         catch (Exception e)
         {
-            errorMessage = $"Помилка надсилання коштів: {e.Message}";
+            await InvokeAsync(() =>
+            {
+                errorMessage = $"Помилка надсилання коштів: {e.Message}";
+                if (e.InnerException != null)
+                {
+                    errorMessage += $" Деталі: {e.InnerException.Message}";
+                }
+                StateHasChanged();
+            });
         }
-        NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
 
+        await Task.Delay(3000);
+        NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
     }
 
-
-
-    private async void PayJob()
+    private async Task PayJob()
     {
         try
         {
             var web3 = await _ethereumHostProvider.GetWeb3Async();
             var serv = new ServiceCenterPaymentServiceBase(web3, "0x5fbdb2315678afecb367f032d93f642f64180aa3");
 
-            // Отримуємо замовлення
             var jb = await JobService.GetJobById(job.Id.Value);
             if (!jb.jobIndex.HasValue)
             {
-                errorMessage = "Зачекайте обробки роботи блокчейном";
-                this.StateHasChanged();
+                await InvokeAsync(() =>
+                {
+                    errorMessage = "Зачекайте обробки роботи блокчейном";
+                    StateHasChanged();
+                });
                 return;
             }
 
             if (jb.IsPaid == true)
             {
-                errorMessage = "Робота оплачена";
-                this.StateHasChanged();
-                return;
-            }
-            // Перевіряємо чи можна спарсити ціну
-            if (!BigInteger.TryParse(jb.WEIPrice, out var amountToSend))
-            {
-                errorMessage = "Некоректна сума для платежу";               
-                this.StateHasChanged();
+                await InvokeAsync(() =>
+                {
+                    errorMessage = "Робота оплачена";
+                    StateHasChanged();
+                });
                 return;
             }
 
-            // Отримуємо адресу першого доступного акаунта
+            if (!BigInteger.TryParse(jb.WEIPrice, out var amountToSend))
+            {
+                await InvokeAsync(() =>
+                {
+                    errorMessage = "Некоректна сума для платежу";
+                    StateHasChanged();
+                });
+                return;
+            }
+
             var accounts = await web3.Eth.Accounts.SendRequestAsync();
             if (accounts == null || accounts.Length == 0)
             {
-                errorMessage = "Не знайдено жодного акаунта";
-                this.StateHasChanged();
+                await InvokeAsync(() =>
+                {
+                    errorMessage = "Не знайдено жодного акаунта";
+                    StateHasChanged();
+                });
                 return;
             }
 
             var fromAddress = accounts[0];
 
-            // Отримуємо актуальний nonce для транзакції
-            var nonce = await web3.Eth.Transactions.GetTransactionCount.SendRequestAsync(fromAddress);
-
-            // Відправляємо транзакцію
-            var tr = await serv.PayJobRequestAndWaitForReceiptAsync(new PayJobFunction()
+            // Перевіряємо баланс
+            var balance = await web3.Eth.GetBalance.SendRequestAsync(fromAddress);
+            if (balance.Value < amountToSend)
+            {
+                await InvokeAsync(() =>
                 {
-                    Nonce = (BigInteger)nonce.Value, // Встановлюємо коректний nonce
+                    errorMessage = "Недостатньо коштів на рахунку";
+                    StateHasChanged();
+                });
+                return;
+            }
+
+            // Отримуємо gas price
+            var gasPrice = await web3.Eth.GasPrice.SendRequestAsync();
+
+            var tr = await serv.PayJobRequestAsync(new PayJobFunction()
+                {
                     AmountToSend = amountToSend,
                     FromAddress = fromAddress,
-                    JobIndex = (BigInteger)jb.jobIndex
+                    JobIndex = (BigInteger)jb.jobIndex,
+                    GasPrice = gasPrice,
+                    Gas = 300000
                 });
+
+            await InvokeAsync(() =>
+            {
+                errorMessage = $"Транзакція відправлена: {tr}";
+                StateHasChanged();
+            });
         }
         catch (Exception e)
         {
-            errorMessage = $"Помилка надсилання коштів: {e.Message}";
+            await InvokeAsync(() =>
+            {
+                errorMessage = $"Помилка надсилання коштів: {e.Message}";
+                if (e.InnerException != null)
+                {
+                    errorMessage += $" Деталі: {e.InnerException.Message}";
+                }
+                StateHasChanged();
+            });
         }
-        NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
 
+        await Task.Delay(3000);
+        NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
     }
 
     private async Task HostProviderOnEnabledChanged(bool enabled)
@@ -484,8 +1062,7 @@ else
         if (enabled)
         {
             await GetChainId();
-            this.StateHasChanged();
-           
+            await InvokeAsync(() => StateHasChanged());
         }
     }
 
@@ -498,15 +1075,21 @@ else
 
     private async Task HostProvider_SelectedAccountChanged(string account)
     {
-        SelectedAccount = account;
+        await InvokeAsync(() =>
+        {
+            SelectedAccount = account;
+            StateHasChanged();
+        });
         await GetChainId();
-        this.StateHasChanged();
     }
 
     private async Task HostProvider_NetworkChanged(long chainId)
     {
-        SelectedChainId = chainId;
-        this.StateHasChanged();
+        await InvokeAsync(() =>
+        {
+            SelectedChainId = chainId;
+            StateHasChanged();
+        });
     }
 
     protected async Task GetBlockHashAsync()

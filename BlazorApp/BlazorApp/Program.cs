@@ -1,6 +1,5 @@
 using BlazorApp.Components;
 using BlazorApp.Components.Account;
-using BlazorApp.Components.Info;
 using BlazorApp.Data;
 using BlazorApp.Extensions;
 using BlazorApp.Services;
@@ -8,11 +7,9 @@ using BlazorApp.Services.Interfaces;
 using Blazorise;
 using Blazorise.Bootstrap;
 using Blazorise.Icons.FontAwesome;
-using Ethereum.MetaMask.Blazor;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.JSInterop;
 using MudBlazor.Services;
 using Nethereum.Metamask;
 using Nethereum.Metamask.Blazor;
@@ -55,7 +52,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseInMemoryDatabase("InMemoryDb"));
-builder.Services.AddDatabaseDeveloperPageExceptionFilter(); 
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
@@ -77,6 +74,7 @@ builder.Services.AddScoped<ITasksService, TasksService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
 builder.Services.AddScoped<IMechanicsService, MechanicsService>();
+builder.Services.AddScoped<IPartsMLService, PartsMLService>();
 
 
 
@@ -88,7 +86,7 @@ builder.Services.AddHttpClient("Identity", client =>
 .ConfigurePrimaryHttpMessageHandler(() =>
 {
     var handler = new HttpClientHandler();
-    handler.CookieContainer = new CookieContainer(); 
+    handler.CookieContainer = new CookieContainer();
     return handler;
 });
 
@@ -174,7 +172,7 @@ builder.Services.AddHttpClient("Part", client =>
     var handler = new HttpClientHandler();
     handler.CookieContainer = new CookieContainer();
     return handler;
-}); 
+});
 builder.Services.AddHttpClient("Vehicle", client =>
 {
     client.BaseAddress = new Uri($"{APIBaseString}parts/Vehicle/");
@@ -199,8 +197,10 @@ builder.Services.AddHttpClient("Parts", client =>
 });
 builder.Services.AddHttpClient("Model", client =>
 {
-    client.BaseAddress = new Uri($"{APIBaseString}model/");
+    client.BaseAddress = new Uri($"{APIBaseString}specialisaton-model/");
     client.DefaultRequestHeaders.Add("Accept", "text/plain");
+    client.Timeout = TimeSpan.FromSeconds(60); // Increased timeout for ML operations
+
 })
 .ConfigurePrimaryHttpMessageHandler(() =>
 {
@@ -208,6 +208,20 @@ builder.Services.AddHttpClient("Model", client =>
     handler.CookieContainer = new CookieContainer();
     return handler;
 });
+builder.Services.AddHttpClient("PPModel", client =>
+    {
+        client.BaseAddress = new Uri($"{APIBaseString}parts-model/");
+        client.DefaultRequestHeaders.Add("Accept", "text/plain");
+        client.DefaultRequestHeaders.Add("Accept", "application/json");
+        client.Timeout = TimeSpan.FromSeconds(60); // Increased timeout for ML operations
+        client.DefaultRequestHeaders.Add("User-Agent", "BlazorApp/1.0");
+    })
+    .ConfigurePrimaryHttpMessageHandler(() =>
+    {
+        var handler = new HttpClientHandler();
+        handler.CookieContainer = new CookieContainer();
+        return handler;
+    });
 builder.Services.AddHttpClient("Specialisations", client =>
 {
     client.BaseAddress = new Uri($"{APIBaseString}jobs/Specialisation/");
@@ -231,7 +245,7 @@ builder.Services.AddHttpClient("Mecahics", client =>
     handler.CookieContainer = new CookieContainer();
     return handler;
 });
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.Environment.WebRootPath)});
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.Environment.WebRootPath) });
 
 builder.Services.AddTransient<ApiHttpClient>();
 

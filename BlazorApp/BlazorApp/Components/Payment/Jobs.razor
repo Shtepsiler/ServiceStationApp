@@ -1,0 +1,187 @@
+﻿@page "/payment/jobs"
+@using System.Numerics
+@using Microsoft.AspNetCore.Authorization
+@using Nethereum.Web3
+@using ServiceCenterPayment
+@using ServiceCenterPayment.ContractDefinition
+@inject IWeb3 Web3
+@attribute [Authorize]
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/payment">Оплата</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Роботи</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Список Робіт</h3>
+    <button class="btn btn-primary" @onclick="LoadJobsAsync" disabled="@isLoading">
+        @if (isLoading)
+        {
+            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+        }
+        Оновити
+    </button>
+</div>
+
+@if (isLoading)
+{
+    <div class="text-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Завантаження...</span>
+        </div>
+        <p class="mt-2">Завантаження робіт...</p>
+    </div>
+}
+else if (jobs.Count == 0)
+{
+    <div class="alert alert-info">
+        <h5>Роботи не знайдено</h5>
+        <p>Наразі немає жодних робіт у системі.</p>
+    </div>
+}
+else
+{
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-success">@jobs.Count(j => j.IsPaid)</h5>
+                    <p class="card-text">Оплачено</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-warning">@jobs.Count(j => !j.IsPaid)</h5>
+                    <p class="card-text">Очікує оплати</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-primary">@jobs.Count</h5>
+                    <p class="card-text">Всього</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>User ID</th>
+                    <th>Job ID</th>
+                    <th>Ціна</th>
+                    <th>Статус оплати</th>
+                    <th>Дії</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var job in jobs)
+                {
+                    <tr class="@(job.IsPaid ? "table-success" : "table-warning")">
+                        <td>@job.UserId</td>
+                        <td>
+                            <code>@job.JobId</code>
+                        </td>
+                        <td>
+                            <strong>@job.Price ETH</strong>
+                        </td>
+                        <td>
+                            @if (job.IsPaid)
+                            {
+                                <span class="badge bg-success">Оплачено</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning">Очікує оплати</span>
+                            }
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info"
+                                    @onclick="() => ViewJobDetails(job)">
+                                Деталі
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger mt-3">
+        <strong>Помилка:</strong> @errorMessage
+    </div>
+}
+
+@code {
+    private ServiceCenterPaymentService _service;
+    private List<JobsOutputDTO> jobs = new();
+    private bool isLoading = true;
+    private string errorMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            string contractAddress = "0x5fbdb2315678afecb367f032d93f642f64180aa3";
+            _service = new ServiceCenterPaymentService(Web3, contractAddress);
+            await LoadJobsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка ініціалізації: {ex.Message}";
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadJobsAsync()
+    {
+        isLoading = true;
+        errorMessage = "";
+        jobs.Clear();
+
+        try
+        {
+            BigInteger index = 0;
+            while (true)
+            {
+                try
+                {
+                    var job = await _service.JobsQueryAsync(index);
+                    if (string.IsNullOrEmpty(job.JobId))
+                        break;
+                    jobs.Add(job);
+                    index++;
+                }
+                catch
+                {
+                    break;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка завантаження робіт: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ViewJobDetails(JobsOutputDTO job)
+    {
+        // TODO: Implement job details modal or navigation
+        // For now, just log to console
+        Console.WriteLine($"Viewing details for job: {job.JobId}");
+    }
+}

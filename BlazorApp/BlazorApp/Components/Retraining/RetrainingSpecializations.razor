@@ -1,0 +1,332 @@
+﻿@page "/retraining/specializations"
+@using BlazorApp.Data
+@using BlazorApp.Extensions.ViewModels
+@using BlazorApp.Extensions.ViewModels.JobsVMs
+@using BlazorApp.Extensions.ViewModels.Model
+@using BlazorApp.Services.Interfaces
+@using Blazorise
+@using Microsoft.AspNetCore.Authorization
+@inject IJobService jobService
+@inject ISpecialisationsService specService
+@inject IMachineLerningService MLService
+@inject IJSRuntime JS
+
+@attribute [Authorize(Roles = "Admin")]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/retraining">Перетренування</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Спеціалізації</li>
+    </ol>
+</nav>
+
+<h3>Перетренування Моделі Спеціалізацій</h3>
+
+@if (modelStats == null || specialisations == null)
+{
+    <div class="text-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Завантаження...</span>
+        </div>
+        <p class="mt-2">Завантаження даних...</p>
+    </div>
+}
+else
+{
+    <!-- Model Statistics -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5>Статистика Моделі</h5>
+            <button class="btn btn-outline-primary btn-sm" @onclick="LoadModelStats">
+                <i class="fas fa-sync-alt"></i> Оновити
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <h4 class="text-primary">@modelStats.Metrics.Accuracy.ToString("P2")</h4>
+                        <p class="mb-0">Точність</p>
+                    </div>
+                </div>
+                @* <div class="col-md-3"> *@
+                @*     <div class="text-center"> *@
+                @*         <h4 class="text-info">@modelStats.total_predictions</h4> *@
+                @*         <p class="mb-0">Всього передбачень</p> *@
+                @*     </div> *@
+                @* </div> *@
+                @* <div class="col-md-3"> *@
+                @*     <div class="text-center"> *@
+                @*         <h4 class="text-success">@modelStats.feedback_total</h4> *@
+                @*         <p class="mb-0">Зворотний зв'язок</p> *@
+                @*     </div> *@
+                @* </div> *@
+                @* <div class="col-md-3"> *@
+                @*     <div class="text-center"> *@
+                @*         <h4 class="text-warning">@modelStats.feedback_ratio.ToString("P1")</h4> *@
+                @*         <p class="mb-0">Коефіцієнт зворотного зв'язку</p> *@
+                @*     </div> *@
+                @* </div> *@
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Loading Controls -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Завантаження Даних для Лейблінгу</h5>
+        </div>
+        <div class="card-body">
+            <div class="row align-items-end">
+                <div class="col-md-4">
+                    <label for="confidenceRange" class="form-label">
+                        Поріг впевненості: @conf.ToString("F2")
+                    </label>
+                    <input id="confidenceRange"
+                           type="range"
+                           min="0"
+                           max="1"
+                           step="0.01"
+                           value="@conf"
+                           @oninput="(e) => conf = float.Parse(e.Value?.ToString(), System.Globalization.CultureInfo.InvariantCulture)"
+                           class="form-range" />
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check">
+                        <InputCheckbox @bind-Value="choseApproverd" class="form-check-input" id="approvedCheck" />
+                        <label class="form-check-label" for="approvedCheck">
+                            Включити затверджені дані
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-primary w-100" @onclick="LoadRetrainData" disabled="@isLoadingData">
+                        @if (isLoadingData)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Завантажити Дані
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Labeling Section -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5>Лейблінг Зразків (@samples.Count зразків)</h5>
+            @if (samples.Count > 0)
+            {
+                <span class="badge bg-info">Необроблено: @samples.Count(s => string.IsNullOrEmpty(s.new_label))</span>
+            }
+        </div>
+        <div class="card-body">
+            @if (samples.Count == 0)
+            {
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Немає даних для лейблінгу. Використайте кнопку "Завантажити Дані" вище.
+                </div>
+            }
+            else
+            {
+                @foreach (var sample in samples)
+                {
+                    <div class="row mb-3 align-items-center border-bottom pb-3" @key="sample.id">
+                        <div class="col-md-6">
+                            <label class="fw-bold">Опис проблеми:</label>
+                            <p class="mb-1 p-2 bg-light rounded">@sample.new_data</p>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Спеціалізація:</label>
+                            <select class="form-select @(string.IsNullOrEmpty(sample.new_label) ? "border-warning" : "border-success")"
+                                    @onchange="(e) => UpdateLabel(sample.id, e.Value?.ToString())">
+                                <option value="">Оберіть спеціалізацію</option>
+                                @foreach (var spec in specialisations)
+                                {
+                                    <option value="@spec.name" selected="@(sample.new_label == spec.name)">
+                                        @spec.name
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2 text-center">
+                            <button class="btn btn-outline-danger btn-sm" @onclick="() => RemoveSample(sample.id)">
+                                <i class="fas fa-trash"></i> Видалити
+                            </button>
+                        </div>
+                    </div>
+                }
+
+                <div class="text-center mt-4">
+                    <button class="btn btn-success btn-lg" @onclick="SubmitLabels" disabled="@isSubmitting">
+                        @if (isSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        <i class="fas fa-check"></i> Підтвердити Мітки
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+
+}
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert alert-danger mt-3">
+        <i class="fas fa-exclamation-triangle"></i> @message
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success mt-3">
+        <i class="fas fa-check-circle"></i> @successMessage
+    </div>
+}
+
+@code {
+    private IEnumerable<SpecialisationVM> specialisations;
+    private List<RetrainRequestVM> samples = new List<RetrainRequestVM>();
+    private ModelStats modelStats;
+    private float conf = 0.5f;
+    private bool choseApproverd = false;
+    private bool isLoadingData = false;
+    private bool isSubmitting = false;
+    private string message = "";
+    private string successMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialData();
+    }
+
+    private async Task LoadInitialData()
+    {
+        try
+        {
+            await LoadSpecialisations();
+            await LoadModelStats();
+        }
+        catch (Exception e)
+        {
+            message = $"Помилка ініціалізації: {e.Message}";
+        }
+    }
+
+    private async Task LoadSpecialisations()
+    {
+        specialisations = await specService.GetSpecialisationsAsync();
+    }
+
+    private async Task LoadModelStats()
+    {
+        modelStats = await MLService.GetStatistics();
+    }
+
+    private async Task LoadRetrainData()
+    {
+        isLoadingData = true;
+        message = "";
+        successMessage = "";
+
+        try
+        {
+            samples.Clear();
+            RetrainRequest retrainRequests = await jobService.GetRetrainData(conf, choseApproverd);
+
+            if (retrainRequests?.new_data != null)
+            {
+                if (retrainRequests.ids == null || retrainRequests.ids.Count != retrainRequests.new_data.Count)
+                {
+                    retrainRequests.ids = Enumerable.Range(0, retrainRequests.new_data.Count)
+                                                    .Select(_ => Guid.NewGuid())
+                                                    .ToList();
+                }
+
+                if (retrainRequests.new_labels == null || retrainRequests.new_labels.Count != retrainRequests.new_data.Count)
+                {
+                    retrainRequests.new_labels = new List<string>(new string[retrainRequests.new_data.Count]);
+                }
+
+                for (int i = 0; i < retrainRequests.new_data.Count; i++)
+                {
+                    samples.Add(new(retrainRequests.ids[i], retrainRequests.new_data[i], retrainRequests.new_labels[i]));
+                }
+            }
+
+            successMessage = $"Завантажено {samples.Count} зразків для лейблінгу";
+        }
+        catch (Exception e)
+        {
+            message = $"Помилка завантаження даних: {e.Message}";
+        }
+        finally
+        {
+            isLoadingData = false;
+        }
+    }
+
+    private void UpdateLabel(Guid id, string newLabel)
+    {
+        var sample = samples.FirstOrDefault(s => s.id == id);
+        if (sample != null)
+        {
+            sample.new_label = newLabel;
+        }
+    }
+
+    private void RemoveSample(Guid id)
+    {
+        samples.RemoveAll(s => s.id == id);
+    }
+
+    private async Task SubmitLabels()
+    {
+        isSubmitting = true;
+        message = "";
+        successMessage = "";
+
+        try
+        {
+            var labeledSamples = samples.Where(s => !string.IsNullOrEmpty(s.new_label)).ToList();
+
+            if (labeledSamples.Count == 0)
+            {
+                message = "Немає жодного зразка з мітками для відправки";
+                return;
+            }
+
+            RetrainRequest retrainRequest = new();
+            foreach (var s in labeledSamples)
+            {
+                retrainRequest.ids.Add(s.id);
+                retrainRequest.new_data.Add(s.new_data);
+                retrainRequest.new_labels.Add(s.new_label);
+            }
+
+            var res = await MLService.RetrainModel(retrainRequest);
+
+            UpdateModelAprovedMV update = new();
+            update.ids = retrainRequest.ids;
+            await jobService.UpdateModelAproved(update);
+
+            successMessage = $"Модель успішно перетренована з {labeledSamples.Count} зразками!";
+            samples.Clear();
+            await LoadModelStats(); // Refresh stats
+        }
+        catch (Exception e)
+        {
+            message = $"Помилка перетренування: {e.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+   
+}

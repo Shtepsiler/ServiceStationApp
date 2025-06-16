@@ -1,0 +1,96 @@
+﻿@page "/statistics"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<h3>Статистика ML Моделей</h3>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Модель Механіків</h5>
+            </div>
+            <div class="card-body">
+                <p>Детальна статистика моделі для класифікації спеціалізацій механіків</p>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-chart-line text-success"></i> Точність моделі та метрики</li>
+                    <li><i class="fas fa-table text-info"></i> Звіт класифікації</li>
+                    <li><i class="fas fa-th text-warning"></i> Матриця невідповідностей</li>
+                    <li><i class="fas fa-info-circle text-primary"></i> Резюме моделі</li>
+                </ul>
+                <a href="/statistics/specializations" class="btn btn-primary">
+                    <i class="fas fa-tools"></i> Переглянути Статистику
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Модель Автозапчастин</h5>
+            </div>
+            <div class="card-body">
+                <p>Статистика моделі для визначення несправних автозапчастин</p>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-tachometer-alt text-success"></i> Метрики продуктивності</li>
+                    <li><i class="fas fa-comments text-info"></i> Аналітика зворотного зв'язку</li>
+                    <li><i class="fas fa-clock text-warning"></i> Статистика часу обробки</li>
+                    <li><i class="fas fa-database text-primary"></i> Використання кешу</li>
+                </ul>
+                <a href="/statistics/parts" class="btn btn-primary">
+                    <i class="fas fa-car"></i> Переглянути Статистику
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Порівняльна Інформація</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Модель Механіків:</h6>
+                        <ul>
+                            <li><strong>Тип:</strong> Класифікація спеціалізацій</li>
+                            <li><strong>Вхідні дані:</strong> Опис проблеми українською</li>
+                            <li><strong>Вихідні дані:</strong> Спеціалізація механіка</li>
+                            <li><strong>Технологія:</strong> Традиційне ML</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Модель Автозапчастин:</h6>
+                        <ul>
+                            <li><strong>Тип:</strong> Передбачення запчастин</li>
+                            <li><strong>Вхідні дані:</strong> Опис проблеми (UA/EN)</li>
+                            <li><strong>Вихідні дані:</strong> Список запчастин з впевненістю</li>
+                            <li><strong>Технологія:</strong> Deep Learning + Active Learning</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h6><i class="fas fa-lightbulb"></i> Корисна Інформація:</h6>
+            <p class="mb-2">
+                Обидві моделі працюють в режимі реального часу та постійно покращуються завдяки зворотному зв'язку від користувачів.
+            </p>
+            <ul class="mb-0">
+                <li>Модель механіків використовує історичні дані з робіт</li>
+                <li>Модель запчастин підтримує активне навчання</li>
+                <li>Обидві моделі підтримують кешування для швидкодії</li>
+                <li>Регулярно проводиться ретренування для покращення точності</li>
+            </ul>
+        </div>
+    </div>
+</div>

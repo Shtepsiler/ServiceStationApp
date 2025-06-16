@@ -101,5 +101,57 @@ namespace BlazorApp.Services
 
             return await httpClient.GetAsync<IEnumerable<JobVMForUser>>("GetJobsBYUserId", parameters);
         }
+
+        public async Task<Pagination<JobVM>> GetAllJobsPaginatedAsync(int pageNumber, int pageSize, string searchTerm = "", Status? status = null)
+        {
+            var parameters = new Dictionary<string, string>
+            {
+                { "pageNumber", pageNumber.ToString() },
+                { "pageSize", pageSize.ToString() }
+            };
+
+            if (!string.IsNullOrEmpty(searchTerm))
+                parameters.Add("searchTerm", searchTerm);
+
+            if (status.HasValue)
+                parameters.Add("status", status.Value.ToString());
+
+            return await httpClient.GetAsync<Pagination<JobVM>>("GetJobsPaginated", parameters);
+        }
+
+        public async Task<Pagination<JobVM>> GetJobsByMechanicPaginatedAsync(Guid mechanicId, int pageNumber, int pageSize, string searchTerm = "", Status? status = null)
+        {
+            var parameters = new Dictionary<string, string>
+            {
+                { "mechanicId", mechanicId.ToString() },
+                { "pageNumber", pageNumber.ToString() },
+                { "pageSize", pageSize.ToString() }
+            };
+
+            if (!string.IsNullOrEmpty(searchTerm))
+                parameters.Add("searchTerm", searchTerm);
+
+            if (status.HasValue)
+                parameters.Add("status", status.Value.ToString());
+
+            return await httpClient.GetAsync<Pagination<JobVM>>("GetJobByMechanicIdPaginated", parameters);
+        }
+        public async Task<Pagination<JobVMForUser>> GetJobsByUserIdPaginatedAsync(Guid userId, int pageNumber, int pageSize, string searchTerm = "", Status? status = null)
+        {
+            var parameters = new Dictionary<string, string>
+            {
+                { "userId", userId.ToString() },
+                { "pageNumber", pageNumber.ToString() },
+                { "pageSize", pageSize.ToString() }
+            };
+
+            if (!string.IsNullOrEmpty(searchTerm))
+                parameters.Add("searchTerm", searchTerm);
+
+            if (status.HasValue)
+                parameters.Add("status", status.Value.ToString());
+
+            return await httpClient.GetAsync<Pagination<JobVMForUser>>("GetJobsBYUserIdPaginated", parameters);
+        }
     }
 }

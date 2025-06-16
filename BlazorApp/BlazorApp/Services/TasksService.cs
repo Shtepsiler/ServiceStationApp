@@ -63,5 +63,25 @@ namespace BlazorApp.Services
 
             await httpClient.PutParametrsAsync("updateStatus", parameters);
         }
+        public async Task<Pagination<TaskViewModel>> GetTasksPaginatedAsync(int pageNumber, int pageSize, string searchTerm = "", Guid? mechanicId = null, TaskStatus? status = null)
+        {
+            var parameters = new Dictionary<string, string>
+            {
+                { "pageNumber", pageNumber.ToString() },
+                { "pageSize", pageSize.ToString() }
+            };
+
+            if (!string.IsNullOrEmpty(searchTerm))
+                parameters.Add("searchTerm", searchTerm);
+
+            if (mechanicId.HasValue)
+                parameters.Add("mechanicId", mechanicId.Value.ToString());
+
+            if (status.HasValue)
+                parameters.Add("status", status.Value.ToString());
+
+            return await httpClient.GetAsync<Pagination<TaskViewModel>>("paginated", parameters);
+        }
+
     }
 }

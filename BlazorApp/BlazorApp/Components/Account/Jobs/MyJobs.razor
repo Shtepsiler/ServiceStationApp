@@ -8,85 +8,676 @@
 @using Microsoft.AspNetCore.Components.QuickGrid
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Authorization
+@using BlazorApp.Helpers
+
 @inject NavigationManager NavigationManager
-@inject IJobService JobService 
+@inject IJobService JobService
 @inject IVehicleService VehicleService
 @inject IUserService UserService
 @inject AuthenticationStateProvider AuthenticationStateProvider
+
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @attribute [Authorize]
 
-<PageTitle>Мої візити</PageTitle>
-<h3>Мої візити</h3>
+<style>
+    .search-section {
+        margin-bottom: 24px;
+    }
 
-    <QuickGrid Items="@visitsQueryable" Class="mt-4">
-    <PropertyColumn Property="@(v => v.Description)" Title="Опис проблеми" />
-    <PropertyColumn Property="@(v => v.ModelName)" Title="Модель" />
-    <PropertyColumn Property="@(v => v.IssueDate)" Title="Дата візиту" />
-    <PropertyColumn Property="@(v => v.Status)" Title="Статус" />
-    <TemplateColumn Title="Actions">
-        <button class="btn btn-info" @onclick="() => ViewVisitDetails(context.Id.Value)">Переглянути</button>
-    </TemplateColumn>
-    </QuickGrid>
-@if (visits?.Count == 0)
-{
-    <a href="/ScheduleAppointment" class="btn btn-primary mt-3">Записатися на візит</a>
-}
+    .search-label, .filter-label {
+        display: block;
+        font-weight: 600;
+        color: #495057;
+        font-size: 1rem;
+        margin-bottom: 8px;
+    }
 
-@if (!string.IsNullOrEmpty(errorMessage))
-{
-    <div class="alert alert-danger mt-3">@errorMessage</div>
-}
+    .filter-section {
+        margin-bottom: 16px;
+    }
+
+    .filter-controls {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .input-group-modern {
+        display: flex;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        max-width: 600px;
+    }
+
+    .form-control-modern {
+        flex: 1;
+        padding: 12px 16px;
+        border: 2px solid #dee2e6;
+        border-right: none;
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+    }
+
+        .form-control-modern:focus {
+            border-color: #007bff;
+            box-shadow: none;
+            outline: none;
+        }
+
+    .visits-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+
+    .visit-card {
+        background: #ffffff;
+        border: 2px solid #e9ecef;
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 8px;
+    }
+
+        .visit-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .visit-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+            border-color: #007bff;
+        }
+
+        .visit-card:nth-child(odd) {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        }
+
+        .visit-card:nth-child(even) {
+            background: linear-gradient(135deg, #ffffff 0%, #f0f8ff 100%);
+        }
+
+    .visit-header {
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid #f1f3f4;
+    }
+
+    .visit-problem {
+        width: 100%;
+    }
+
+    .problem-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #212529;
+        margin: 0 0 12px 0;
+        line-height: 1.3;
+    }
+
+    .problem-vehicle {
+        font-size: 1rem;
+        color: #6c757d;
+        font-weight: 500;
+        padding: 4px 8px;
+        background: rgba(108, 117, 125, 0.1);
+        border-radius: 6px;
+        display: inline-block;
+    }
+
+    .visit-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .visit-date, .visit-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 10px;
+        border: 1px solid #e9ecef;
+    }
+
+    .meta-icon {
+        font-size: 1.2rem;
+        width: 24px;
+        text-align: center;
+    }
+
+    .meta-label {
+        font-weight: 600;
+        color: #495057;
+        min-width: 90px;
+    }
+
+    .meta-value {
+        font-weight: 500;
+        color: #212529;
+        flex: 1;
+    }
+
+    .visit-actions {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .btn-card {
+        padding: 10px 20px !important;
+        font-size: 0.9rem !important;
+        border-radius: 8px !important;
+    }
+
+    .filter-badge {
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        color: #1565c0;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid #90caf9;
+    }
+
+    .filter-close {
+        background: none;
+        border: none;
+        color: #1565c0;
+        font-size: 1.2rem;
+        cursor: pointer;
+        padding: 0;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s ease;
+    }
+
+        .filter-close:hover {
+            background-color: rgba(21, 101, 192, 0.1);
+        }
+
+    .pagination-container {
+        margin-top: 32px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .pagination-modern {
+        display: flex;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        gap: 4px;
+    }
+
+    .pagination-item {
+        margin: 0;
+    }
+
+    .pagination-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 12px;
+        border: 2px solid #dee2e6;
+        background: white;
+        color: #495057;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        min-width: 40px;
+    }
+
+        .pagination-link:hover:not(:disabled) {
+            border-color: #007bff;
+            background: #f8f9fa;
+            transform: translateY(-1px);
+        }
+
+    .pagination-item.active .pagination-link {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        border-color: #007bff;
+        color: white;
+    }
+
+    .pagination-item.disabled .pagination-link {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .pagination-info {
+        color: #6c757d;
+        font-size: 0.9rem;
+        text-align: center;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6c757d;
+    }
+
+    .empty-icon {
+        font-size: 4rem;
+        margin-bottom: 20px;
+        opacity: 0.5;
+    }
+
+    .empty-state h3 {
+        color: #495057;
+        margin-bottom: 12px;
+        font-weight: 600;
+    }
+
+    .empty-state p {
+        margin-bottom: 24px;
+        line-height: 1.6;
+    }
+
+    .spinner-mini {
+        width: 16px;
+        height: 16px;
+        border: 2px solid transparent;
+        border-top: 2px solid currentColor;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @@media (max-width: 768px) {
+        .visits-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        .visit-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .visit-actions {
+            justify-content: stretch;
+        }
+
+        .btn-card {
+            width: 100% !important;
+            justify-content: center !important;
+        }
+
+        .input-group-modern {
+            flex-direction: column;
+            max-width: none;
+        }
+
+        .form-control-modern {
+            border-right: 2px solid #dee2e6;
+            border-bottom: none;
+        }
+
+        .filter-controls {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
+        }
+
+        .pagination-modern {
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+    }
+</style>
+<div class="job-management-container">
+    <PageTitle>Мої візити</PageTitle>
+
+    <div class="job-header">
+        <h1 class="job-title">Мої візити</h1>
+        <div class="job-id">Керування вашими зверненнями</div>
+    </div>
+
+    <!-- Search and Filter Section -->
+    <div class="section-container">
+        <!-- Search Section -->
+        <div class="search-section">
+            <label class="search-label">🔍 Пошук візитів</label>
+            <div class="input-group-modern">
+                <input type="text" class="form-control-modern" placeholder="Введіть опис проблеми або модель автомобіля..." @bind="searchTerm">
+                <button class="btn-modern btn-primary-modern" type="button" @onclick="SearchJobs" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <div class="spinner-mini"></div>
+                    }
+                    else
+                    {
+                        <span>🔍</span>
+                    }
+                    Пошук
+                </button>
+            </div>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <label class="filter-label">📋 Фільтр за статусом</label>
+            <div class="filter-controls">
+                <select class="select-modern" @bind="selectedStatus" @bind:after="SearchJobs">
+                    @foreach (var status in statuses)
+                    {
+                        <option value="@status">@GetStatusDisplayName(status)</option>
+                    }
+                </select>
+
+                @if (selectedStatus != "all")
+                {
+                    <span class="filter-badge">
+                        📌 @GetStatusDisplayName(selectedStatus)
+                        <button type="button" class="filter-close" @onclick="ClearStatusFilter">×</button>
+                    </span>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>Завантаження ваших візитів...</p>
+        </div>
+    }
+    else
+    {
+        <div class="section-container">
+            <h2 class="section-title">📅 Результати пошуку</h2>
+
+            @if (pagination?.Items?.Count > 0)
+            {
+                <div class="visits-grid">
+                    @foreach (var visit in pagination.Items)
+                    {
+                        <div class="visit-card">
+                            <div class="visit-header">
+                                <div class="visit-problem">
+                                    <h4 class="problem-title">@visit.Description</h4>
+                                    <div class="problem-vehicle">🚗 @visit.ModelName</div>
+                                </div>
+                            </div>
+
+                            <div class="visit-meta">
+                                <div class="visit-date">
+                                    <span class="meta-icon">📅</span>
+                                    <span class="meta-label">Дата візиту:</span>
+                                    <span class="meta-value">@visit.IssueDate.Value.ToString("dd MMMM yyyy")</span>
+                                </div>
+
+                                <div class="visit-status">
+                                    <span class="meta-icon">🏷️</span>
+                                    <span class="meta-label">Статус:</span>
+                                    <span class="status-badge @GetStatusClass(visit.Status.ToString())">
+                                        @GetStatusDisplayName(visit.Status.ToString())
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="visit-actions">
+                                <button class="btn-modern btn-info-modern btn-card" @onclick="() => ViewVisitDetails(visit.Id.Value)">
+                                    👁️ Переглянути деталі
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Pagination -->
+                @if (pagination != null && pagination.TotalPages > 1)
+                {
+                    <div class="pagination-container">
+                        <nav aria-label="Jobs pagination">
+                            <ul class="pagination-modern">
+                                <li class="pagination-item @(pagination.HasPrevious == false ? "disabled" : "")">
+                                    <button class="pagination-link" @onclick="() => ChangePage(1)" disabled="@(pagination.HasPrevious == false)">
+                                        ⏮️
+                                    </button>
+                                </li>
+                                <li class="pagination-item @(pagination.HasPrevious == false ? "disabled" : "")">
+                                    <button class="pagination-link" @onclick="() => ChangePage(currentPage - 1)" disabled="@(pagination.HasPrevious == false)">
+                                        ◀️
+                                    </button>
+                                </li>
+
+                                @for (int apage = GetStartPage(); apage <= GetEndPage(); apage++)
+                                {
+                                    int pageNumber = apage;
+                                    <li class="pagination-item @(apage == currentPage ? "active" : "")">
+                                        <button class="pagination-link" @onclick="() => ChangePage(pageNumber)">@apage</button>
+                                    </li>
+                                }
+
+                                <li class="pagination-item @(pagination.HasNext == false ? "disabled" : "")">
+                                    <button class="pagination-link" @onclick="() => ChangePage(currentPage + 1)" disabled="@(pagination.HasNext == false)">
+                                        ▶️
+                                    </button>
+                                </li>
+                                <li class="pagination-item @(pagination.HasNext == false ? "disabled" : "")">
+                                    <button class="pagination-link" @onclick="() => ChangePage(pagination.TotalPages)" disabled="@(pagination.HasNext == false)">
+                                        ⏭️
+                                    </button>
+                                </li>
+                            </ul>
+                        </nav>
+
+                        <div class="pagination-info">
+                            📊 Сторінка @currentPage з @pagination.TotalPages
+                            (Всього: @((pagination.TotalPages - 1) * pagination.PageSize + pagination.Items.Count) записів)
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="empty-state">
+                    <div class="empty-icon">📋</div>
+                    <h3>Не знайдено жодних візитів</h3>
+                    <p>Схоже, у вас поки немає записів на візити або вони не відповідають критеріям пошуку.</p>
+                    <a href="/ScheduleAppointment" class="btn-modern btn-primary-modern">
+                        📅 Записатися на візит
+                    </a>
+                </div>
+            }
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert-modern alert-danger-modern">
+            <strong>⚠️ Помилка:</strong> @errorMessage
+        </div>
+    }
+</div>
+
+
 @code {
-
-    private List<JobVMForUser> visits;
-    private IQueryable<JobVMForUser> visitsQueryable;
-    private List<VehicleViewModel> vehicles = new();
     private string userid;
     private string errorMessage;
+
+    // Pagination and search properties
+    private Pagination<JobVMForUser> pagination;
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private string searchTerm = string.Empty;
+    private bool isLoading = false;
+
+    private IQueryable<JobVMForUser> visitsQueryable = Enumerable.Empty<JobVMForUser>().AsQueryable();
+    private List<string> statuses = new() { "all", "New", "Pending", "InProgress", "Completed" };
+    private string selectedStatus = "all";
 
     protected override async Task OnInitializedAsync()
     {
         var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authenticationState.User;
+
         try
         {
             if (user.Identity.IsAuthenticated)
             {
                 userid = user.Claims.Where(c => c.Type == ClaimTypes.NameIdentifier).Select(c => c.Value).FirstOrDefault();
+                await LoadJobsAsync();
             }
-            var visitsVMs = await JobService.GetJobsBYUserId(Guid.Parse(userid));
-            foreach (var v in visitsVMs)
+        }
+        catch (Exception ex)
+        {
+            HandleError(ex);
+        }
+    }
+
+    private string GetStatusDisplayName(string status)
+    {
+        return status switch
+        {
+            "all" => "🔍 Всі статуси",
+            "New" => "🆕 Новий",
+            "Pending" => "⏳ Очікує",
+            "InProgress" => "🔄 В роботі",
+            "Completed" => "✅ Завершено",
+            _ => status
+        };
+    }
+
+    private string GetStatusClass(string status)
+    {
+        return status.ToLower() switch
+        {
+            "new" => "status-pending",
+            "pending" => "status-pending",
+            "inprogress" => "status-inprogress",
+            "completed" => "status-completed",
+            _ => "status-pending"
+        };
+    }
+
+    private async Task LoadJobsAsync()
+    {
+        if (isLoading) return;
+
+        isLoading = true;
+        try
+        {
+            // Get current status filter (convert "all" to null)
+            Status? statusFilter = null;
+            if (selectedStatus != "all")
             {
-                try {
-                    var veh = await VehicleService.GetById(v.VehicleId);
-                    v.ModelName = veh.fullModelName;
+                statusFilter = Enum.Parse<Status>(selectedStatus);
+            }
+
+            // Use the paginated method for user jobs
+            pagination = await JobService.GetJobsByUserIdPaginatedAsync(Guid.Parse(userid), currentPage, pageSize, searchTerm, statusFilter);
+
+            // Load vehicle info for each job
+            foreach (var job in pagination.Items)
+            {
+                try
+                {
+                    if (job.VehicleId.HasValue)
+                    {
+                        var vehicle = await VehicleService.GetById(job.VehicleId.Value);
+                        job.ModelName = vehicle.fullModelName;
+                    }
+                    else
+                    {
+                        job.ModelName = "Модель не вказана";
+                    }
                 }
                 catch
                 {
-                    v.ModelName = "Не знайдено";
+                    job.ModelName = "Не знайдено";
                 }
             }
-            visits = visitsVMs.ToList();
-            if (visits.Count == 0)
-            {
-                errorMessage = "Не знайдено жодних візитів";
 
-            }
-            visitsQueryable = visits.AsQueryable();
+            visitsQueryable = pagination.Items.AsQueryable();
+            errorMessage = null;
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
-            errorMessage = ex.Message;
+            HandleError(ex);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
         }
     }
+
+    private async Task ChangePage(int newPage)
+    {
+        if (newPage < 1 || (pagination != null && newPage > pagination.TotalPages) || newPage == currentPage)
+            return;
+
+        currentPage = newPage;
+        await LoadJobsAsync();
+    }
+
+    private int GetStartPage()
+    {
+        if (pagination == null) return 1;
+        return Math.Max(1, currentPage - 2);
+    }
+
+    private int GetEndPage()
+    {
+        if (pagination == null) return 1;
+        return Math.Min(pagination.TotalPages, currentPage + 2);
+    }
+
+    private async Task SearchJobs()
+    {
+        currentPage = 1; // Reset to first page
+        await LoadJobsAsync();
+    }
+
+    private async Task ClearStatusFilter()
+    {
+        selectedStatus = "all";
+        currentPage = 1; // Reset to first page
+        await LoadJobsAsync();
+    }
+
+    private void HandleError(Exception e)
+    {
+        errorMessage = e.Message.Contains("The input does not contain any JSON tokens.")
+            ? "No jobs found"
+            : e.Message;
+    }
+
     private void ViewVisitDetails(Guid visitId)
     {
         NavigationManager.NavigateTo($"/myjobs/job/{visitId}");
     }
+
     public class SearchModel
     {
         public string SearchTerm { get; set; }
     }
-
 }

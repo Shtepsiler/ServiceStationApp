@@ -18,7 +18,7 @@
         public int? jobIndex { get; set; }
         public string? Specialisation { get; set; }
         public string? WEIPrice { get; set; }
-
+        public string? PredictionId { get; set; }
         public List<TaskViewModel> Tasks { get; set; } = new();
 
 

@@ -7,69 +7,197 @@
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
+@using BlazorApp.Helpers
+
 @inject ITasksService TaskService
 @inject IUserService UserService
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthenticationStateProvider
+
 @attribute [Authorize]
 
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
-@if (mechanics != null && tasks != null)
-{
-    <h3>Tasks</h3>
-    <AuthorizeView Roles="Admin">
-        <div class="mb-3">
-            <label for="mechanicSelect" class="form-label">Оберіть механіка:</label>
-            <select @onchange="OnMechanicChange" id="mechanicSelect" class="form-select">
-                <option value="">All</option>
-                @foreach (var mechanic in mechanics)
+
+<h3>Tasks</h3>
+
+<div class="d-flex justify-content-between mb-3">
+    <div class="input-group">
+        <input type="text" class="form-control" placeholder="Пошук завдань..." @bind="searchTerm">
+        <button class="btn btn-outline-secondary" type="button" @onclick="SearchTasks" disabled="@isLoading">
+            @if (isLoading)
+            {
+                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+            }
+            Пошук
+        </button>
+    </div>
+
+    <div class="d-flex gap-2">
+        <AuthorizeView Roles="Admin">
+            <div>
+                <select @bind="selectedMechanicFilter" @bind:after="SearchTasks" class="form-select">
+                    <option value="">Всі механіки</option>
+                    @if (mechanics != null)
+                    {
+                        @foreach (var mechanic in mechanics)
+                        {
+                            <option value="@mechanic.Id">@mechanic.UserName</option>
+                        }
+                    }
+                </select>
+            </div>
+        </AuthorizeView>
+
+        <div>
+            <select @bind="selectedStatus" @bind:after="SearchTasks" class="form-select">
+                @foreach (var status in statuses)
                 {
-                    <option value="@mechanic.Id">@mechanic.UserName</option>
+                    <option value="@status">@status</option>
                 }
             </select>
         </div>
+    </div>
+</div>
 
-        <button class="btn btn-primary" @onclick="AddTask">Додати завдання</button>
-    </AuthorizeView>
+@if (!string.IsNullOrEmpty(selectedMechanicFilter) && mechanics != null)
+{
+    var mechanic = mechanics.FirstOrDefault(m => m.Id.ToString() == selectedMechanicFilter);
+    if (mechanic != null)
+    {
+        <div class="mb-3">
+            <span class="badge bg-info">
+                Механік: @mechanic.UserName
+                <button type="button" class="btn-close btn-close-white ms-2" @onclick="ClearMechanicFilter"></button>
+            </span>
+        </div>
+    }
+}
 
-    <QuickGrid Items="@tasks">
-        <PropertyColumn Property="@(t => t.Name)" Title="Назва" Sortable="true"></PropertyColumn>
-        <PropertyColumn Property="@(t => t.Task)" Title="Опис" Sortable="true"></PropertyColumn>
-        <PropertyColumn Property="@(t => t.Status)" Title="Статус" Sortable="true"></PropertyColumn>
-        <PropertyColumn Property="@(t => t.Price)" Title=" Ціна" Sortable="true"></PropertyColumn>
+@if (selectedStatus != "all")
+{
+    <div class="mb-3">
+        <span class="badge bg-info">
+            Статус: @selectedStatus
+            <button type="button" class="btn-close btn-close-white ms-2" @onclick="ClearStatusFilter"></button>
+        </span>
+    </div>
+}
 
-        <TemplateColumn Title="Механік" Context="task">
-            @if (mechanics != null)
-            {
-                var mech = mechanics.FirstOrDefault(p => p.Id == task.MechanicId);
-                if (mech != null)
-                {
-                    <span>@(mech.UserName)</span>
-                }
-                else
-                {
-                    <span>Не знайдено</span>
-                }
-            }
-        </TemplateColumn>
+<AuthorizeView Roles="Admin">
+    <button class="btn btn-primary mb-3" @onclick="AddTask">Додати завдання</button>
+</AuthorizeView>
 
-        <TemplateColumn Title="Дії" Context="task">
-            <button class="btn btn-secondary" @onclick="() => EditTask(task.Id)">Змінити</button>
-            <AuthorizeView Roles="Admin">
-                <button class="btn btn-danger" @onclick="() => DeleteTask(task.Id)">Видалити</button>
-            </AuthorizeView>
-        </TemplateColumn>
-    </QuickGrid>
+@if (isLoading)
+{
+    <div class="text-center my-4">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Завантаження...</span>
+        </div>
+    </div>
 }
 else
 {
-    <div>Завантаження</div>
+    @if (pagination != null)
+    {
+        <QuickGrid Items="@tasksQueryable">
+            <PropertyColumn Property="@(t => t.Name)" Title="Назва" Sortable="true"></PropertyColumn>
+            <PropertyColumn Property="@(t => t.Task)" Title="Опис" Sortable="true"></PropertyColumn>
+            <PropertyColumn Property="@(t => t.Status)" Title="Статус" Sortable="true"></PropertyColumn>
+            <PropertyColumn Property="@(t => t.Price)" Title="Ціна" Sortable="true"></PropertyColumn>
+
+            <TemplateColumn Title="Механік" Context="task">
+                @if (mechanics != null)
+                {
+                    var mech = mechanics.FirstOrDefault(p => p.Id == task.MechanicId);
+                    if (mech != null)
+                    {
+                        <span>@(mech.UserName)</span>
+                    }
+                    else
+                    {
+                        <span>Не знайдено</span>
+                    }
+                }
+            </TemplateColumn>
+
+            <TemplateColumn Title="Дії" Context="task">
+                <button class="btn btn-secondary" @onclick="() => EditTask(task.Id)">Змінити</button>
+                <AuthorizeView Roles="Admin">
+                    <button class="btn btn-danger" @onclick="() => DeleteTask(task.Id)">Видалити</button>
+                </AuthorizeView>
+            </TemplateColumn>
+        </QuickGrid>
+
+        @* Pagination controls *@
+        <nav aria-label="Tasks pagination" class="mt-3">
+            <ul class="pagination justify-content-center">
+                <li class="page-item @(pagination.HasPrevious == false ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => ChangePage(1)" disabled="@(pagination.HasPrevious == false)">
+                        <i class="fas fa-angle-double-left"></i>
+                    </button>
+                </li>
+                <li class="page-item @(pagination.HasPrevious == false ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => ChangePage(currentPage - 1)" disabled="@(pagination.HasPrevious == false)">
+                        <i class="fas fa-angle-left"></i>
+                    </button>
+                </li>
+
+                @for (int apage = GetStartPage(); apage <= GetEndPage(); apage++)
+                {
+                    int pageNumber = apage;
+                    <li class="page-item @(apage == currentPage ? "active" : "")">
+                        <button class="page-link" @onclick="() => ChangePage(pageNumber)">@apage</button>
+                    </li>
+                }
+
+                <li class="page-item @(pagination.HasNext == false ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => ChangePage(currentPage + 1)" disabled="@(pagination.HasNext == false)">
+                        <i class="fas fa-angle-right"></i>
+                    </button>
+                </li>
+                <li class="page-item @(pagination.HasNext == false ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => ChangePage(pagination.TotalPages)" disabled="@(pagination.HasNext == false)">
+                        <i class="fas fa-angle-double-right"></i>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+
+        @* Page info *@
+        <div class="text-center text-muted">
+            Сторінка @currentPage з @pagination.TotalPages (Всього: @((pagination.TotalPages - 1) * pagination.PageSize + pagination.Items.Count) записів)
+        </div>
+
+        @if (pagination.Items.Count == 0)
+        {
+            <div class="text-center mt-4">
+                <p>Не знайдено жодних завдань</p>
+            </div>
+        }
+    }
+}
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger mt-3">@errorMessage</div>
 }
 
 @code {
-    private IQueryable<TaskViewModel> tasks = Enumerable.Empty<TaskViewModel>().AsQueryable();
     private List<MechanicViewModel> mechanics;
     private Guid? selectedMechanic;
+    private string errorMessage;
+
+    // Pagination and search properties
+    private Pagination<TaskViewModel> pagination;
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private string searchTerm = string.Empty;
+    private bool isLoading = false;
+
+    private IQueryable<TaskViewModel> tasksQueryable = Enumerable.Empty<TaskViewModel>().AsQueryable();
+    private List<string> statuses = new() { "all", "New", "InProgress", "Completed", "Cancelled" };
+    private string selectedStatus = "all";
+    private string selectedMechanicFilter = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -79,43 +207,124 @@ else
             var user = authenticationState.User;
             if (user.IsInRole("Mechanic"))
             {
-                // Отримуємо Id користувача з claims
-                var userIdClaim = user.FindFirst(c => c.Type == new ClaimsIdentityOptions().UserIdClaimType); // "sub" часто використовується для Id
+                var userIdClaim = user.FindFirst(c => c.Type == new ClaimsIdentityOptions().UserIdClaimType);
                 if (userIdClaim != null)
                 {
                     selectedMechanic = Guid.Parse(userIdClaim.Value);
+                    selectedMechanicFilter = selectedMechanic.ToString();
                 }
             }
+
+            await LoadMechanicsAsync();
+            await LoadTasksAsync();
         }
-        catch
+        catch (Exception ex)
         {
-            selectedMechanic = null;
+            HandleError(ex);
         }
-    
-    await LoadTasks();
     }
 
-    private async Task LoadTasks()
+    private async Task LoadMechanicsAsync()
     {
         try
         {
-            tasks = (selectedMechanic == null || selectedMechanic == Guid.Empty)
-                ? (await TaskService.GetTasks()).AsQueryable()
-                : (await TaskService.GetTasksByMechanic(selectedMechanic.Value)).AsQueryable();
-
             var mechanicsVMs = await UserService.GetMechanics();
             mechanics = mechanicsVMs.ToList();
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            // Handle exception if needed
+            HandleError(ex);
         }
     }
 
-    private async Task OnMechanicChange(ChangeEventArgs e)
+    private async Task LoadTasksAsync()
     {
-        selectedMechanic = Guid.TryParse(e.Value?.ToString(), out var mechanicId) ? mechanicId : (Guid?)null;
-        await LoadTasks();
+        if (isLoading) return;
+
+        isLoading = true;
+        try
+        {
+            // Determine which mechanic to filter by
+            Guid? mechanicFilter = null;
+            if (!string.IsNullOrEmpty(selectedMechanicFilter))
+            {
+                mechanicFilter = Guid.Parse(selectedMechanicFilter);
+            }
+            else if (selectedMechanic.HasValue)
+            {
+                mechanicFilter = selectedMechanic.Value;
+            }
+
+            // Get current status filter (convert "all" to null)
+            TaskStatus? statusFilter = null;
+            if (selectedStatus != "all")
+            {
+                statusFilter = Enum.Parse<TaskStatus>(selectedStatus);
+            }
+
+            // Call paginated service method
+            pagination = await TaskService.GetTasksPaginatedAsync(currentPage, pageSize, searchTerm, mechanicFilter, statusFilter);
+
+            tasksQueryable = pagination?.Items?.AsQueryable() ?? Enumerable.Empty<TaskViewModel>().AsQueryable();
+            errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            HandleError(ex);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ChangePage(int newPage)
+    {
+        if (newPage < 1 || (pagination != null && newPage > pagination.TotalPages) || newPage == currentPage)
+            return;
+
+        currentPage = newPage;
+        await LoadTasksAsync();
+    }
+
+    private int GetStartPage()
+    {
+        if (pagination == null) return 1;
+        return Math.Max(1, currentPage - 2);
+    }
+
+    private int GetEndPage()
+    {
+        if (pagination == null) return 1;
+        return Math.Min(pagination.TotalPages, currentPage + 2);
+    }
+
+    private async Task SearchTasks()
+    {
+        currentPage = 1; // Reset to first page
+        await LoadTasksAsync();
+    }
+
+    private async Task ClearMechanicFilter()
+    {
+        selectedMechanicFilter = "";
+        currentPage = 1;
+        await LoadTasksAsync();
+    }
+
+    private async Task ClearStatusFilter()
+    {
+        selectedStatus = "all";
+        currentPage = 1;
+        await LoadTasksAsync();
+    }
+
+    private void HandleError(Exception e)
+    {
+        errorMessage = e.Message.Contains("The input does not contain any JSON tokens.")
+            ? "No tasks found"
+            : e.Message;
     }
 
     private void AddTask()
@@ -130,7 +339,14 @@ else
 
     private async Task DeleteTask(Guid taskId)
     {
-        await TaskService.DeleteTask(taskId);
-        await LoadTasks();
+        try
+        {
+            await TaskService.DeleteTask(taskId);
+            await LoadTasksAsync(); // Reload current page
+        }
+        catch (Exception ex)
+        {
+            HandleError(ex);
+        }
     }
 }
