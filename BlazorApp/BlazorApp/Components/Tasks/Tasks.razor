@@ -195,7 +195,7 @@ else
     private bool isLoading = false;
 
     private IQueryable<TaskViewModel> tasksQueryable = Enumerable.Empty<TaskViewModel>().AsQueryable();
-    private List<string> statuses = new() { "all", "New", "InProgress", "Completed", "Cancelled" };
+    private List<string> statuses = new() { "all","New","Pending", "InProgress", "Completed"};
     private string selectedStatus = "all";
     private string selectedMechanicFilter = "";
 
@@ -256,10 +256,10 @@ else
             }
 
             // Get current status filter (convert "all" to null)
-            TaskStatus? statusFilter = null;
+            Status? statusFilter = null;
             if (selectedStatus != "all")
             {
-                statusFilter = Enum.Parse<TaskStatus>(selectedStatus);
+                statusFilter = Enum.Parse<Status>(selectedStatus);
             }
 
             // Call paginated service method
