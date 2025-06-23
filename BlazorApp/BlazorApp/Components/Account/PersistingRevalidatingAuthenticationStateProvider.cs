@@ -39,7 +39,7 @@ namespace BlazorApp.Components.Account
             subscription = state.RegisterOnPersisting(OnPersistingAsync, RenderMode.InteractiveWebAssembly);
         }
 
-        protected override TimeSpan RevalidationInterval => TimeSpan.FromMinutes(60);
+        protected override TimeSpan RevalidationInterval => TimeSpan.FromMinutes(120);
 
         protected override async Task<bool> ValidateAuthenticationStateAsync(
             AuthenticationState authenticationState, CancellationToken cancellationToken)

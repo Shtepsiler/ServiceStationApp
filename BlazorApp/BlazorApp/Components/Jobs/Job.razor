@@ -458,7 +458,9 @@
 
 <div class="job-management-container">
     <PageTitle>Деталі роботи</PageTitle>
-
+    <button class="back-button" @onclick='() => NavigationManager.NavigateTo("/jobs")'>
+        ← Повернутися до списку робіт
+    </button>
     <div class="metamask-section">
         <Metamask SelectedAccountTruncateLength="15" ConnectText="Please Connect" InstallMetamaskText="Please install Metamask" />
     </div>

@@ -1,15 +1,14 @@
+using BlazorApp.Client;
+using BlazorApp.Data;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using System.Diagnostics;
-using BlazorApp.Client;
-using BlazorApp.Data;
 using Nethereum.UI;
+using System.Diagnostics;
+using System.Security.Claims;
 
 namespace ServiceStationApp.Components.Account
 {
@@ -45,7 +44,7 @@ namespace ServiceStationApp.Components.Account
             InitSelectedHostProvider();
         }
 
-        protected override TimeSpan RevalidationInterval => TimeSpan.FromMinutes(60);
+        protected override TimeSpan RevalidationInterval => TimeSpan.FromMinutes(120);
 
         // Implement the missing abstract method
         protected override async Task<bool> ValidateAuthenticationStateAsync(

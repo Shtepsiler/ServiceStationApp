@@ -12,7 +12,7 @@ namespace BlazorApp.Components.Account
             SameSite = SameSiteMode.Strict,
             HttpOnly = true,
             IsEssential = true,
-            MaxAge = TimeSpan.FromMinutes(60),
+            MaxAge = TimeSpan.FromMinutes(120),
         };
 
         [DoesNotReturn]
