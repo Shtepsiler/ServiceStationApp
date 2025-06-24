@@ -185,13 +185,13 @@ h1:focus {
     border: 1px solid #dee2e6;
     border-radius: 0.5rem;
     background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-    transition: all 0.2s ease-in-out;
+/*    transition: all 0.2s ease-in-out;*/
 }
 
     .uncertain-sample:hover {
         border-color: #007bff;
         box-shadow: 0 0.125rem 0.25rem rgba(0, 123, 255, 0.075);
-        transform: translateY(-1px);
+/*        transform: translateY(-1px);*/
     }
 
     .uncertain-sample .problem-description,
